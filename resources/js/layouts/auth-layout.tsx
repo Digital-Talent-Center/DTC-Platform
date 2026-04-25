@@ -6,7 +6,7 @@ interface AuthLayoutProps {
   description?: string;
 }
 
-export default function AuthLayout({ children, title, description, ...props }: AuthLayoutProps) {
+export default function AuthLayout({ children, ...props }: AuthLayoutProps) {
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 via-amber-50/30 to-gray-100" {...props}>
       {/* Minimal Header */}

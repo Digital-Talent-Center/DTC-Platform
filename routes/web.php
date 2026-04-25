@@ -16,6 +16,10 @@ Route::middleware(['auth'])->group(function () {
         return Inertia::render('profile');
     })->name('profile');
 
+    Route::get('profile/edit', function () {
+        return Inertia::render('profile-edit');
+    })->name('profile.edit');
+
     Route::get('dashboard/activities', function () {
         return Inertia::render('activities');
     })->name('dashboard.activities');
@@ -28,6 +32,10 @@ Route::middleware(['auth'])->group(function () {
         // For now, render achievements as placeholder
         return Inertia::render('achievements');
     })->name('dashboard.achievements.new');
+
+    Route::get('dashboard/co-guide', function () {
+        return Inertia::render('co-guide');
+    })->name('dashboard.co-guide');
 
     Route::get('timeline', function () {
         return Inertia::render('Timeline/Index');
