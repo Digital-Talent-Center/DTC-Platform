@@ -6,9 +6,10 @@ import React from 'react';
 // sangat cocok untuk membungkus custom UI dari framework eksternal.
 interface AppLayoutProps {
     children: React.ReactNode;
+    breadcrumbs?: any[];
 }
 
-export default function AppLayout({ children }: AppLayoutProps) {
+export default function AppLayout({ children, breadcrumbs }: AppLayoutProps) {
     return (
         <div className="min-h-screen flex flex-col bg-background font-sans antialiased text-foreground">
             <Header />

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, ReactNode } from 'react';
 import AppLayout from "@/layouts/app-layout";
 import { Head, Link } from "@inertiajs/react";
 
@@ -15,7 +15,7 @@ interface NotificationItem {
 /* ── Category config (colors, icons) ───────────────── */
 const categoryConfig: Record<
   NotificationItem['category'],
-  { border: string; bg: string; iconColor: string; labelColor: string; icon: JSX.Element }
+  { border: string; bg: string; iconColor: string; labelColor: string; icon: ReactNode }
 > = {
   'TASK UPDATE': {
     border: 'border-l-green-500',

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, Head } from '@inertiajs/react';
 import AppLayout from "@/layouts/app-layout";
 
-const tabs = ['To Do', 'Ongoing', 'Need Review', 'Done'];
+const tabs = ['Achievement Collection', 'Need Approval', 'Rejected'];
 
 const achievements = [
   {
@@ -17,6 +17,7 @@ const achievements = [
     iconColor: 'text-amber-600',
     iconPath: 'M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z',
     avatars: ['AA', 'BB'],
+    status: 'approved',
   },
   {
     id: 2,
@@ -31,6 +32,7 @@ const achievements = [
     iconPath: 'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z',
     avatars: ['CC'],
     extraAvatars: 3,
+    status: 'pending',
   },
   {
     id: 3,
@@ -44,6 +46,7 @@ const achievements = [
     iconColor: 'text-gray-600',
     iconPath: 'M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5',
     avatars: ['DD'],
+    status: 'rejected',
   },
 ];
 
@@ -59,7 +62,14 @@ const featuredAchievement = {
 };
 
 export default function AchievementsPage() {
-  const [activeTab, setActiveTab] = useState('Need Review');
+  const [activeTab, setActiveTab] = useState('Achievement Collection');
+
+  const filteredAchievements = achievements.filter(item => {
+    if (activeTab === 'Achievement Collection') return item.status === 'approved';
+    if (activeTab === 'Need Approval') return item.status === 'pending';
+    if (activeTab === 'Rejected') return item.status === 'rejected';
+    return false;
+  });
 
   return (
     <AppLayout>
@@ -92,7 +102,7 @@ export default function AchievementsPage() {
 
         {/* Achievement Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {achievements.map((item) => (
+          {filteredAchievements.map((item) => (
             <div key={item.id} className="bg-white rounded-2xl border border-gray-100 p-6 flex flex-col justify-between hover:shadow-md transition-shadow">
               <div>
                 <div className="flex items-start justify-between mb-4">
@@ -136,8 +146,9 @@ export default function AchievementsPage() {
         </div>
 
         {/* Bottom Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 mt-5">
-          {/* Featured Card */}
+        {activeTab === 'Achievement Collection' && (
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 mt-5">
+            {/* Featured Card */}
           <div className="lg:col-span-3 bg-white rounded-2xl border border-gray-100 p-6 flex flex-col sm:flex-row gap-5">
             <div className="flex-shrink-0 w-full sm:w-48 h-40 rounded-xl bg-gradient-to-br from-green-100 to-emerald-200 flex items-center justify-center">
               <svg xmlns="http://www.w3.org/2000/svg" className="w-16 h-16 text-green-400/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={0.8}>
@@ -180,7 +191,8 @@ export default function AchievementsPage() {
               <p className="text-xs text-gray-400 mt-0.5">Submit a new internal request</p>
             </div>
           </Link>
-        </div>
+          </div>
+        )}
       </div>
     </AppLayout>
   );
