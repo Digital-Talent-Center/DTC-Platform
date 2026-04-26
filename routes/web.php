@@ -41,6 +41,10 @@ Route::middleware(['auth'])->group(function () {
         return Inertia::render('co-library');
     })->name('dashboard.co-library');
 
+    Route::get('notifications', function () {
+        return Inertia::render('notifications');
+    })->name('notifications');
+
     Route::get('timeline', function () {
         return Inertia::render('Timeline/Index');
     })->name('timeline');
