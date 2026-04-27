@@ -1,8 +1,11 @@
 import { Link, usePage } from '@inertiajs/react';
 import { useState, useRef, useEffect } from 'react';
+import { type SharedData } from '@/types';
 
 export default function Header() {
-  const { url: pathname } = usePage();
+  const { url: pathname, props } = usePage<SharedData>();
+  const { auth } = props;
+  const isAdmin = auth?.user?.role === 'admin';
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -21,6 +24,7 @@ export default function Header() {
   const navLinks = [
     { href: '/dashboard', label: 'DASHBOARD' },
     { href: '/timeline', label: 'TIMELINE' },
+    ...(isAdmin ? [{ href: '/admin/dashboard', label: 'ADMIN DASHBOARD', isAdmin: true }] : []),
   ];
 
   const isActive = (href: string) => {
@@ -55,10 +59,15 @@ export default function Header() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`text-sm font-semibold tracking-wider transition-colors pb-0.5 ${isActive(link.href)
-                  ? 'text-amber-600 border-b-2 border-amber-500'
-                  : 'text-gray-500 hover:text-gray-800'
-                  }`}
+                className={`text-sm font-semibold tracking-wider transition-colors pb-0.5 ${
+                  isActive(link.href)
+                    ? (link as any).isAdmin
+                      ? 'text-amber-600 border-b-2 border-amber-500'
+                      : 'text-amber-600 border-b-2 border-amber-500'
+                    : (link as any).isAdmin
+                      ? 'text-amber-500 hover:text-amber-600'
+                      : 'text-gray-500 hover:text-gray-800'
+                }`}
               >
                 {link.label}
               </Link>
@@ -164,10 +173,13 @@ export default function Header() {
                 key={link.href}
                 href={link.href}
                 onClick={() => setMobileOpen(false)}
-                className={`block px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive(link.href)
-                  ? 'bg-amber-50 text-amber-700'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
+                className={`block px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isActive(link.href)
+                    ? 'bg-amber-50 text-amber-700'
+                    : (link as any).isAdmin
+                      ? 'text-amber-500 hover:bg-amber-50 hover:text-amber-700'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
               >
                 {link.label}
               </Link>
