@@ -1,8 +1,11 @@
 import { Link, usePage } from '@inertiajs/react';
 import { useState, useRef, useEffect } from 'react';
+import { type SharedData } from '@/types';
 
 export default function Header() {
-  const { url: pathname } = usePage();
+  const { url: pathname, props } = usePage<SharedData>();
+  const { auth } = props;
+  const isAdmin = auth?.user?.role === 'admin';
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -21,6 +24,7 @@ export default function Header() {
   const navLinks = [
     { href: '/dashboard', label: 'DASHBOARD' },
     { href: '/timeline', label: 'TIMELINE' },
+    ...(isAdmin ? [{ href: '/admin/dashboard', label: 'ADMIN DASHBOARD', isAdmin: true }] : []),
   ];
 
   const isActive = (href: string) => {
