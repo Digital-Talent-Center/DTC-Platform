@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, Head } from "@inertiajs/react";
 import AppLayout from "@/layouts/app-layout";
+import { api, type Post } from "@/services/api";
 
 const menuItems = [
   {
@@ -8,7 +9,7 @@ const menuItems = [
     href: "/dashboard/activities",
     iconBg: "bg-orange-50",
     iconColor: "text-orange-500",
-    iconPath: "M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5",
+    iconPath: "M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0121 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5",
   },
   {
     label: "My Achievements",
@@ -41,7 +42,6 @@ const menuItems = [
   },
 ];
 
-/* Extra menu items shown in "Menu Lain" dropdown */
 const extraMenuItems = [
   {
     label: "Profile",
@@ -73,59 +73,38 @@ const extraMenuItems = [
   },
 ];
 
-/* Dummy premium/highlighted posts data */
-const premiumPosts = [
-  {
-    id: 1,
-    user: "Rina Kartika",
-    avatar: "RK",
-    avatarColor: "from-pink-400 to-rose-500",
-    image: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600&h=400&fit=crop",
-    caption: "Berhasil menyelesaikan project Machine Learning pertama! Menggunakan TensorFlow untuk prediksi harga rumah. Hasilnya lumayan akurat 🎉🤖",
-    tag: "Machine Learning",
-    time: "2 jam lalu",
-  },
-  {
-    id: 2,
-    user: "Budi Santoso",
-    avatar: "BS",
-    avatarColor: "from-blue-400 to-indigo-500",
-    image: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&h=400&fit=crop",
-    caption: "Workshop UI/UX Design selesai! Belajar banyak tentang design thinking dan prototyping. Terima kasih mentor yang sudah membimbing 🙏✨",
-    tag: "UI/UX Design",
-    time: "5 jam lalu",
-  },
-  {
-    id: 3,
-    user: "Sari Dewi",
-    avatar: "SD",
-    avatarColor: "from-emerald-400 to-teal-500",
-    image: "https://images.unsplash.com/photo-1504639725590-34d0984388bd?w=600&h=400&fit=crop",
-    caption: "Sertifikasi Cloud Computing akhirnya didapat! Perjalanan 3 bulan yang penuh tantangan namun sangat worth it. Lets go ke next level! ☁️🚀",
-    tag: "Cloud Computing",
-    time: "1 hari lalu",
-  },
-  {
-    id: 4,
-    user: "Ahmad Fauzi",
-    avatar: "AF",
-    avatarColor: "from-amber-400 to-orange-500",
-    image: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600&h=400&fit=crop",
-    caption: "Hackathon Nasional 2026 — Tim kami berhasil masuk final! Projektnya tentang IoT Smart Agriculture. Doakan menang ya teman-teman 🌾💪",
-    tag: "Hackathon",
-    time: "2 hari lalu",
-  },
-  {
-    id: 5,
-    user: "Maya Putri",
-    avatar: "MP",
-    avatarColor: "from-violet-400 to-purple-500",
-    image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=400&fit=crop",
-    caption: "Data Visualization challenge completed! Membuat dashboard interaktif menggunakan D3.js. Proud of this one 📊🎨",
-    tag: "Data Science",
-    time: "3 hari lalu",
-  },
-];
+// Helper to format time
+const formatTime = (dateString: string) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString();
+};
+
+// Helper to get initials
+const getInitials = (name: string) => {
+  return name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'AA';
+};
+
+// Helper to get random avatar color
+const getAvatarColor = (index: number) => {
+  const colors = [
+    'from-pink-400 to-rose-500',
+    'from-blue-400 to-indigo-500',
+    'from-emerald-400 to-teal-500',
+    'from-amber-400 to-orange-500',
+    'from-violet-400 to-purple-500',
+  ];
+  return colors[index % colors.length];
+};
 
 function MenuIcon({ path, className }: { path: string; className?: string }) {
   return (
@@ -155,7 +134,6 @@ function MenuLainButton() {
         className="group bg-white rounded-2xl border border-gray-100 p-6 sm:p-8 flex flex-col items-center justify-center gap-4 hover:shadow-lg hover:border-gray-200 hover:-translate-y-0.5 transition-all duration-200 w-full cursor-pointer"
       >
         <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-indigo-50 to-purple-100 text-indigo-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-          {/* Library / bookshelf icon */}
           <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75z" />
           </svg>
@@ -184,7 +162,7 @@ function MenuLainButton() {
 }
 
 /* ──────────────── Premium Post Popup Modal ──────────────── */
-function PostModal({ post, onClose }: { post: any; onClose: () => void }) {
+function PostModal({ post, onClose }: { post: Post; onClose: () => void }) {
   useEffect(() => {
     document.body.style.overflow = "hidden";
     function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
@@ -194,8 +172,6 @@ function PostModal({ post, onClose }: { post: any; onClose: () => void }) {
       window.removeEventListener("keydown", onKey);
     };
   }, [onClose]);
-
-  if (!post) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={onClose}>
@@ -217,8 +193,13 @@ function PostModal({ post, onClose }: { post: any; onClose: () => void }) {
 
         {/* Left — Full Image */}
         <div className="md:w-1/2 w-full h-64 md:h-auto bg-gray-100 flex-shrink-0 relative overflow-hidden">
-          <img src={post.image} alt={post.caption} className="w-full h-full object-cover" />
-          {/* Gradient overlay at bottom on mobile */}
+          {post.imageUrl ? (
+            <img src={post.imageUrl} alt="Post" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
+              <span className="text-gray-500">No image</span>
+            </div>
+          )}
           <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-black/30 to-transparent md:hidden" />
         </div>
 
@@ -226,22 +207,22 @@ function PostModal({ post, onClose }: { post: any; onClose: () => void }) {
         <div className="md:w-1/2 w-full p-6 sm:p-8 flex flex-col overflow-y-auto">
           {/* User Info */}
           <div className="flex items-center gap-3 mb-5">
-            <div className={`w-11 h-11 rounded-full bg-gradient-to-br ${post.avatarColor} flex items-center justify-center text-white text-sm font-bold shadow-md`}>
-              {post.avatar}
+            <div className={`w-11 h-11 rounded-full bg-gradient-to-br ${getAvatarColor(post.userId)} flex items-center justify-center text-white text-sm font-bold shadow-md`}>
+              {getInitials(post.user?.name || 'AA')}
             </div>
             <div>
-              <p className="font-semibold text-gray-900 text-sm">{post.user}</p>
-              <p className="text-xs text-gray-400">{post.time}</p>
+              <p className="font-semibold text-gray-900 text-sm">{post.user?.name || 'Anonymous'}</p>
+              <p className="text-xs text-gray-400">{formatTime(post.createdAt)}</p>
             </div>
           </div>
 
           {/* Tag */}
           <span className="inline-flex self-start px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 mb-4">
-            ⭐ {post.tag}
+            ⭐ Post
           </span>
 
           {/* Caption */}
-          <p className="text-gray-700 text-sm leading-relaxed flex-1">{post.caption}</p>
+          <p className="text-gray-700 text-sm leading-relaxed flex-1">{post.content}</p>
 
           {/* Premium badge */}
           <div className="mt-6 pt-4 border-t border-gray-100 flex items-center gap-2">
@@ -250,7 +231,7 @@ function PostModal({ post, onClose }: { post: any; onClose: () => void }) {
                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
               </svg>
             </div>
-            <span className="text-xs font-medium text-gray-400">Premium Highlighted Post</span>
+            <span className="text-xs font-medium text-gray-400">Highlighted Post</span>
           </div>
         </div>
       </div>
@@ -260,10 +241,27 @@ function PostModal({ post, onClose }: { post: any; onClose: () => void }) {
 
 /* ──────────────── Premium Posts Carousel ──────────────── */
 function PremiumPostsSection() {
-  const [selectedPost, setSelectedPost] = useState<any>(null);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
+
+  useEffect(() => {
+    const loadPosts = async () => {
+      try {
+        const response = await api.posts.list(1, 5);
+        setPosts(response.data);
+      } catch (err) {
+        console.error('Failed to load posts:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPosts();
+  }, []);
 
   function updateScrollButtons() {
     const el = scrollRef.current;
@@ -285,6 +283,32 @@ function PremiumPostsSection() {
     el.scrollBy({ left: dir * 380, behavior: "smooth" });
   }
 
+  if (loading) {
+    return (
+      <div className="mt-10">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-md shadow-amber-200/50">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Premium Highlights</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Loading posts...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (posts.length === 0) {
+    return (
+      <div className="mt-10 bg-white rounded-2xl border border-gray-100 p-8 text-center">
+        <p className="text-gray-500">No posts yet. Start sharing!</p>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="mt-10 relative">
@@ -297,8 +321,8 @@ function PremiumPostsSection() {
               </svg>
             </div>
             <div>
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Premium Highlights</h2>
-              <p className="text-xs text-gray-400 mt-0.5">Postingan unggulan dari pengguna lain</p>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Recent Posts</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Latest from your community</p>
             </div>
           </div>
 
@@ -324,7 +348,7 @@ function PremiumPostsSection() {
           className="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
-          {premiumPosts.map((post) => (
+          {posts.map((post, idx) => (
             <div key={post.id}
               onClick={() => setSelectedPost(post)}
               className="group flex-shrink-0 w-[360px] sm:w-[420px] bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-xl hover:border-amber-200 hover:-translate-y-1 transition-all duration-300 cursor-pointer snap-start"
@@ -332,14 +356,19 @@ function PremiumPostsSection() {
               <div className="flex h-[180px] sm:h-[200px]">
                 {/* Left — Post Image */}
                 <div className="w-[45%] relative overflow-hidden bg-gray-100">
-                  <img src={post.image} alt={post.tag}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                  {/* Premium ribbon */}
+                  {post.imageUrl ? (
+                    <img src={post.imageUrl} alt="Post"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
+                      <span className="text-gray-500 text-xs">No image</span>
+                    </div>
+                  )}
                   <div className="absolute top-3 left-0 bg-gradient-to-r from-amber-500 to-orange-400 text-white text-[10px] font-bold px-2.5 py-1 rounded-r-full shadow-md flex items-center gap-1">
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3" viewBox="0 0 20 20" fill="currentColor">
                       <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                     </svg>
-                    PREMIUM
+                    POST
                   </div>
                 </div>
 
@@ -347,23 +376,23 @@ function PremiumPostsSection() {
                 <div className="w-[55%] p-4 flex flex-col justify-between">
                   {/* User */}
                   <div className="flex items-center gap-2 mb-2">
-                    <div className={`w-7 h-7 rounded-full bg-gradient-to-br ${post.avatarColor} flex items-center justify-center text-white text-[10px] font-bold`}>
-                      {post.avatar}
+                    <div className={`w-7 h-7 rounded-full bg-gradient-to-br ${getAvatarColor(idx)} flex items-center justify-center text-white text-[10px] font-bold`}>
+                      {getInitials(post.user?.name || 'AA')}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold text-gray-800 truncate">{post.user}</p>
-                      <p className="text-[10px] text-gray-400">{post.time}</p>
+                      <p className="text-xs font-semibold text-gray-800 truncate">{post.user?.name || 'Anonymous'}</p>
+                      <p className="text-[10px] text-gray-400">{formatTime(post.createdAt)}</p>
                     </div>
                   </div>
 
                   {/* Tag */}
                   <span className="inline-flex self-start px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-600 mb-2">
-                    {post.tag}
+                    Post
                   </span>
 
                   {/* Caption preview (truncated) */}
                   <p className="text-xs text-gray-600 leading-relaxed line-clamp-3 flex-1">
-                    {post.caption}
+                    {post.content}
                   </p>
 
                   {/* CTA */}
@@ -379,14 +408,15 @@ function PremiumPostsSection() {
           ))}
 
           {/* "Lihat Semua" card at end */}
-          <div className="flex-shrink-0 w-[180px] bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-100 flex flex-col items-center justify-center gap-3 hover:shadow-lg hover:border-amber-200 transition-all cursor-pointer snap-start">
+          <Link href="/timeline"
+            className="flex-shrink-0 w-[180px] bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-100 flex flex-col items-center justify-center gap-3 hover:shadow-lg hover:border-amber-200 transition-all cursor-pointer snap-start">
             <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center">
               <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
               </svg>
             </div>
             <span className="text-xs font-semibold text-amber-700">Lihat Semua</span>
-          </div>
+          </Link>
         </div>
       </div>
 
@@ -435,7 +465,7 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        {/* Premium Highlighted Posts — replaces the Achievement Journey banner */}
+        {/* Premium Posts Section */}
         <PremiumPostsSection />
       </div>
     </AppLayout>

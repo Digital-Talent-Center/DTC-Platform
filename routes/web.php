@@ -9,12 +9,12 @@ Route::get('/', function () {
 
 Route::middleware(['auth'])->group(function () {
     Route::get('dashboard', function () {
-        return Inertia::render('dashboard');
+        return Inertia::render('Dashboard');
     })->name('dashboard');
 
     Route::get('profile', function () {
         return Inertia::render('profile');
-    })->name('profile');
+    })->name('profile.show');
 
     Route::get('profile/edit', function () {
         return Inertia::render('profile-edit');
@@ -29,7 +29,6 @@ Route::middleware(['auth'])->group(function () {
     })->name('dashboard.achievements');
 
     Route::get('dashboard/achievements/new', function () {
-        // For now, render achievements as placeholder
         return Inertia::render('achievements');
     })->name('dashboard.achievements.new');
 
@@ -42,7 +41,7 @@ Route::middleware(['auth'])->group(function () {
     })->name('dashboard.co-library');
 
     Route::get('notifications', function () {
-        return Inertia::render('notifications');
+        return Inertia::render('Notifications');
     })->name('notifications');
 
     Route::get('timeline', function () {
