@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Activity;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class ActivityController extends Controller
 {
@@ -53,13 +54,11 @@ class ActivityController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'type' => 'required|string|max:100|min:1',
-            'title' => 'required|string|max:255|min:1',
+            'type' => 'required|string|max:100',
+            'title' => 'required|string|max:255',
             'description' => 'nullable|string|max:1000',
             'status' => 'required|in:pending,in_progress,completed,cancelled',
             'activity_date' => 'required|date',
-            'relatable_id' => 'nullable|integer|min:1',
-            'relatable_type' => 'nullable|string|max:100',
         ]);
 
         $activity = Activity::create([
@@ -67,7 +66,10 @@ class ActivityController extends Controller
             ...$validated,
         ]);
 
-        return $this->apiResponse($activity, 'Activity created successfully', 201);
+        return response()->json([
+            'message' => 'Activity created',
+            'data' => $activity
+        ]);
     }
 
     /**
@@ -134,4 +136,25 @@ class ActivityController extends Controller
             'data' => $stats,
         ]);
     }
+
+    public function page(Request $request)
+{
+    $activities = Activity::where('user_id', Auth::id())
+        ->orderByDesc('activity_date')
+        ->get()
+        ->map(function ($item) {
+            return [
+                'id' => $item->id,
+                'type' => $item->type,
+                'title' => $item->title,
+                'description' => $item->description,
+                'status' => $item->status,
+                'activity_date' => $item->activity_date->toDateString(),
+            ];
+        });
+
+    return Inertia::render('activities', [
+        'activities' => $activities
+    ]);
+}
 }

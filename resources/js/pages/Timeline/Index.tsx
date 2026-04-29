@@ -2,6 +2,7 @@ import AppLayout from '@/layouts/app-layout';
 import { Head } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import { api, type Post, type ProfileExtension } from '@/services/api';
+import { Link } from '@inertiajs/react';
 
 const postActions = ['Photo', 'Video', 'Event', 'Write article'];
 const postActionIcons = [
@@ -33,9 +34,18 @@ const getInitials = (name: string) => {
   return name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'AA';
 };
 
+function getBatchYear(nim?: string) {
+  if (!nim || nim.length < 7) return '-';
+  return `20${nim.slice(5, 7)}`;
+}
+
 interface PostWithUI extends Post {
   showComments?: boolean;
 }
+
+type ProfileWithStudyProgram = ProfileExtension & {
+  studyProgram?: string;
+};
 
 // ─── Like Icon ──────────────────────────────
 const LikeIcon = ({ filled }: { filled: boolean }) => (
@@ -189,11 +199,13 @@ export default function TimelineIndex() {
                     </div>
                     <div>
                       <p className="text-[10px] font-semibold tracking-wider text-gray-400">STUDY PROGRAM</p>
-                      <p className="text-sm font-medium text-gray-800">{profile.studyProgram || '-'}</p>
+                      <p className="text-sm font-medium text-gray-800">{profile.major || '-'}</p>
                     </div>
                     <div>
                       <p className="text-[10px] font-semibold tracking-wider text-gray-400">BATCH YEAR</p>
-                      <p className="text-sm font-medium text-gray-800">{profile.batchYear || '-'}</p>
+                      <p className="text-sm font-medium text-gray-800">
+                        {getBatchYear(profile?.nim)}
+                      </p>
                     </div>
                   </>
                 ) : (
@@ -399,9 +411,12 @@ export default function TimelineIndex() {
                   </div>
                 </div>
               </div>
-              <button className="w-full mt-4 py-2 text-xs font-medium text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+              <Link 
+                href={route('dashboard.activities')}
+                className="block w-full mt-4 py-2 text-center text-xs font-medium text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              >
                 View All Calendar
-              </button>
+              </Link>
             </div>
           </div>
         </div>

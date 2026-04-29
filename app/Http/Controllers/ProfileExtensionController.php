@@ -14,16 +14,20 @@ class ProfileExtensionController extends Controller
      * Get authenticated user's profile extension
      */
     public function show()
-    {
-        $userId = Auth::id();
-        $profile = ProfileExtension::where('user_id', $userId)->first();
+{
+    $userId = Auth::id();
 
-        if (!$profile) {
-            $profile = ProfileExtension::create(['user_id' => $userId]);
-        }
+    $profile = ProfileExtension::with('user')
+        ->where('user_id', $userId)
+        ->first();
 
-        return $this->apiResponse($profile);
+    if (!$profile) {
+        $profile = ProfileExtension::create(['user_id' => $userId]);
+        $profile->load('user'); // penting!
     }
+
+    return $this->apiResponse($profile);
+}
 
     /**
      * Get other user's profile extension

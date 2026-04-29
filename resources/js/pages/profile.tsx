@@ -1,20 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AppLayout from "@/layouts/app-layout";
 import { Head, Link } from "@inertiajs/react";
+import { api, type ProfileExtension } from '@/services/api';
 
 export default function ProfilePage() {
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(12);
+  const [profile, setProfile] = useState<ProfileExtension | null>(null);
 
-  const profileData = {
-    name: 'Arrijal Julfa Arrasyid',
-    role: 'HUMAN CAPITAL',
-    roleColor: 'bg-amber-500 text-white',
-    email: 'arrijal.julfa@dtc.web',
-    nim: '202488192',
-    faculty: 'Faculty of Social Sciences',
-    about: 'Passionate Human Capital professional with a focus on organizational development and talent acquisition. Dedicated to building inclusive workspaces where innovation thrives and individuals reach their full potential.',
-  };
 
   const achievements = [
     { title: '1st Place HC Competition', desc: 'Regional Talent Strategy 2023', icon: '🏆' },
@@ -22,9 +15,26 @@ export default function ProfilePage() {
     { title: "Dean's List Honoree", desc: 'Top 5% Academic Excellence', icon: '📜' },
   ];
 
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const res = await api.profile.get();
+        setProfile(res.data);
+      } catch (err) {
+        console.error('Failed to load profile:', err);
+      }
+    };
+
+    loadProfile();
+  }, []);
+
   const toggleLike = () => {
     setLiked(!liked);
     setLikeCount(prev => liked ? prev - 1 : prev + 1);
+  };
+
+  const getInitials = (name?: string) => {
+    return name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'AA';
   };
 
   return (
@@ -44,29 +54,29 @@ export default function ProfilePage() {
             <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-12 sm:-mt-14">
               {/* Avatar */}
               <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-3xl sm:text-4xl font-bold shadow-xl border-4 border-white flex-shrink-0">
-                AA
+                {getInitials(profile?.user?.name)}
               </div>
 
               {/* Name & Info */}
               <div className="flex-1 pb-1">
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{profileData.name}</h1>
-                <span className={`inline-block mt-1.5 px-3 py-1 text-[10px] font-bold tracking-wider rounded-full ${profileData.roleColor}`}>
-                  {profileData.role}
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{profile?.user.name || 'User'}</h1>
+                <span className={`inline-block mt-1.5  py-1 text-[20px] font-bold tracking-wider rounded-full ${profile?.roleColor}`}>
+                  {profile?.role}
                 </span>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mt-3 text-sm text-gray-500">
                   <span className="flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" /></svg>
-                    {profileData.email}
+                    {profile?.user?.email || '-'}
                   </span>
                   <span className="text-gray-300 hidden sm:inline">•</span>
                   <span className="flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z" /></svg>
-                    NIM: {profileData.nim}
+                    NIM: {profile?.nim}
                   </span>
                   <span className="text-gray-300 hidden sm:inline">•</span>
                   <span className="flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.636 50.636 0 00-2.658-.813A59.906 59.906 0 0112 3.493a59.903 59.903 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0112 13.489a50.702 50.702 0 017.74-3.342" /></svg>
-                    {profileData.faculty}
+                    {profile?.faculty}
                   </span>
                 </div>
               </div>
@@ -91,7 +101,7 @@ export default function ProfilePage() {
                 <span className="w-1 h-5 bg-amber-500 rounded-full" />
                 About
               </h2>
-              <p className="text-sm text-gray-600 leading-relaxed">{profileData.about}</p>
+              <p className="text-sm text-gray-600 leading-relaxed">{profile?.user?.about || 'No description'}</p>
             </div>
 
             {/* Achievements */}

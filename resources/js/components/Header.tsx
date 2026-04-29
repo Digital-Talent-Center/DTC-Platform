@@ -9,6 +9,7 @@ export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const user = auth?.user;
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -95,11 +96,11 @@ export default function Header() {
                 className="flex items-center gap-3 ml-2 px-2 py-1.5 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
               >
                 <span className="text-sm text-gray-700">
-                  Hi, <span className="font-medium">Arrijal Julfa Arrasyid!</span>
+                  Hi, <span className="font-medium">{user?.name || 'User'}!</span>
                 </span>
                 {/* Avatar */}
                 <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white font-bold text-xs shadow-sm">
-                  AA
+                  {user?.name ? user.name.charAt(0) + user.name.split(' ')[1]?.charAt(0) : 'AA'}
                 </div>
                 {/* Chevron */}
                 <svg xmlns="http://www.w3.org/2000/svg" className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -112,8 +113,12 @@ export default function Header() {
                 <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl border border-gray-200 shadow-lg py-1.5 z-50 animate-in fade-in slide-in-from-top-1">
                   {/* User Info */}
                   <div className="px-4 py-3 border-b border-gray-100">
-                    <p className="text-sm font-semibold text-gray-900">Arrijal Julfa Arrasyid</p>
-                    <p className="text-xs text-gray-400 mt-0.5">abcxyz123@gmail.com</p>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {user?.name || 'User'}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {user?.email || '-'}
+                    </p>
                   </div>
 
                   {/* Menu Items */}
