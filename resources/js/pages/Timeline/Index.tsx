@@ -174,9 +174,9 @@ export default function TimelineIndex() {
               <div className="h-20 bg-gradient-to-r from-amber-400 to-amber-500" />
               <div className="px-5 pb-5 -mt-8 text-center">
                 <div className="w-16 h-16 mx-auto rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 border-4 border-white shadow-md flex items-center justify-center text-white text-lg font-bold">
-                  {getInitials(profile?.name || 'AA')}
+                  {getInitials(profile?.user?.name || 'AA')}
                 </div>
-                <h3 className="mt-3 text-base font-semibold text-gray-900">{profile?.name || 'User'}</h3>
+                <h3 className="mt-3 text-base font-semibold text-gray-900">{profile?.user?.name || 'User'}</h3>
                 <p className="text-xs text-gray-400">Student</p>
                 <div className="mt-4 pt-4 border-t border-gray-100 space-y-2">
                   <div className="flex justify-between text-xs"><span className="text-gray-400">PROFILE VIEWS</span><span className="font-bold text-amber-600">142</span></div>
@@ -221,7 +221,7 @@ export default function TimelineIndex() {
             <div className="bg-white rounded-2xl border border-gray-100 p-5">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-xs font-bold">
-                  {getInitials(profile?.name || 'AA')}
+                  {getInitials(profile?.user?.name || 'AA')}
                 </div>
                 <input 
                   type="text" 

@@ -18,22 +18,41 @@ class ActivityController extends Controller
     {
         $userId = Auth::id();
 
-        $activities = Activity::where('user_id', $userId)
-            ->when($request->type, function ($query) use ($request) {
-                $query->where('type', $request->type);
+        $activities = Activity::query()
+            ->where('user_id', $userId)
+            ->when($request->filled('type'), fn ($q) =>
+                $q->where('type', $request->type)
+            )
+            ->when($request->filled('status'), fn ($q) =>
+                $q->where('status', $request->status)
+            )
+            ->when($request->filled('days'), function ($q) use ($request) {
+                $q->where('activity_date', '>=', now()->subDays($request->days));
+            }, function ($q) {
+                $q->where('activity_date', '>=', now()->subDays(30));
             })
-            ->when($request->status, function ($query) use ($request) {
-                $query->where('status', $request->status);
-            })
-            ->when($request->days, function ($query) use ($request) {
-                $query->where('created_at', '>=', now()->subDays($request->days));
-            }, function ($query) {
-                $query->where('created_at', '>=', now()->subDays(30)); // Default: last 30 days
-            })
-            ->orderByDesc('created_at')
+            ->latest('activity_date')
             ->paginate(15);
 
-        return $this->paginatedResponse($activities);
+        // Format response with clean date/time strings
+        $formatted = $activities->through(function ($item) {
+            return [
+                'id' => $item->id,
+                'type' => $item->type,
+                'title' => $item->title,
+                'description' => $item->description,
+                'status' => $item->status,
+                'activity_date' => $item->activity_date ? $item->activity_date->format('Y-m-d') : null,
+                'deadline' => $item->deadline ? $item->deadline->format('Y-m-d') : null,
+                'start_time' => $item->start_time ? substr($item->start_time, 0, 5) : null,
+                'end_time' => $item->end_time ? substr($item->end_time, 0, 5) : null,
+                'location' => $item->location,
+                'created_at' => $item->created_at?->toISOString(),
+                'updated_at' => $item->updated_at?->toISOString(),
+            ];
+        });
+
+        return $this->paginatedResponse($formatted);
     }
 
     /**
@@ -53,23 +72,56 @@ class ActivityController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'type' => 'required|string|max:100',
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string|max:1000',
-            'status' => 'required|in:pending,in_progress,completed,cancelled',
-            'activity_date' => 'required|date',
-        ]);
+        try {
+            $validated = $request->validate([
+                'type' => 'required|in:event,task',
+                'title' => 'required|string|max:255',
+                'description' => 'nullable|string|max:1000',
+                'status' => 'required|in:pending,in_progress,completed,cancelled',
+                'activity_date' => 'required|date',
+                'deadline' => 'nullable|date',
+                'location' => 'nullable|string|max:255',
+                'start_time' => 'nullable|date_format:H:i',
+                'end_time' => 'nullable|date_format:H:i',
+            ]);
 
-        $activity = Activity::create([
-            'user_id' => Auth::id(),
-            ...$validated,
-        ]);
+            $activity = Activity::create([
+                'user_id' => auth()->id(),
+                'type' => $validated['type'],
+                'title' => $validated['title'],
+                'description' => $validated['description'] ?? null,
+                'status' => $validated['status'] ?? 'pending',
+                'activity_date' => $validated['activity_date'],
+                'deadline' => $validated['deadline'] ?? null,
+                'location' => $validated['location'] ?? null,
+                'start_time' => $validated['start_time'] ?? null,
+                'end_time' => $validated['end_time'] ?? null,
+            ]);
 
-        return response()->json([
-            'message' => 'Activity created',
-            'data' => $activity
-        ]);
+            // Reload to get proper casts
+            $activity->refresh();
+
+            return response()->json([
+                'message' => 'Activity created',
+                'data' => [
+                    'id' => $activity->id,
+                    'type' => $activity->type,
+                    'title' => $activity->title,
+                    'description' => $activity->description,
+                    'status' => $activity->status,
+                    'activity_date' => $activity->activity_date ? $activity->activity_date->format('Y-m-d') : null,
+                    'deadline' => $activity->deadline ? $activity->deadline->format('Y-m-d') : null,
+                    'start_time' => $activity->start_time ? substr($activity->start_time, 0, 5) : null,
+                    'end_time' => $activity->end_time ? substr($activity->end_time, 0, 5) : null,
+                    'location' => $activity->location,
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
@@ -84,8 +136,11 @@ class ActivityController extends Controller
         $validated = $request->validate([
             'title' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
-            'status' => 'sometimes|required|in:pending,in_progress,completed,cancelled',
+            'status' => 'sometimes|required|in:pending,in_progress,completed,cancelled,overdue',
             'activity_date' => 'sometimes|required|date',
+            'start_time' => 'nullable|date_format:H:i',
+            'end_time' => 'nullable|date_format:H:i',
+            'location' => 'nullable|string|max:255',
         ]);
 
         $activity->update($validated);
@@ -119,7 +174,7 @@ class ActivityController extends Controller
             'total' => $user->activities()->recent($days)->count(),
             'completed' => $user->activities()->recent($days)->status('completed')->count(),
             'inProgress' => $user->activities()->recent($days)->status('in_progress')->count(),
-            'pending' => $user->activities()->recent($days)->status('pending')->count(),
+            'upcoming' => $user->activities()->recent($days)->status('upcoming')->count(),
             'byType' => $user->activities()->recent($days)
                 ->selectRaw('type, COUNT(*) as count')
                 ->groupBy('type')
@@ -138,23 +193,30 @@ class ActivityController extends Controller
     }
 
     public function page(Request $request)
-{
-    $activities = Activity::where('user_id', Auth::id())
-        ->orderByDesc('activity_date')
-        ->get()
-        ->map(function ($item) {
-            return [
-                'id' => $item->id,
-                'type' => $item->type,
-                'title' => $item->title,
-                'description' => $item->description,
-                'status' => $item->status,
-                'activity_date' => $item->activity_date->toDateString(),
-            ];
-        });
+    {
+        $userId = Auth::id();
+        
+        $activities = Activity::query()
+            ->where('user_id', $userId)
+            ->latest('activity_date')
+            ->paginate(15)
+            ->through(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'type' => $item->type,
+                    'title' => $item->title,
+                    'description' => $item->description,
+                    'status' => $item->status,
+                    'activity_date' => $item->activity_date?->format('Y-m-d'),
+                    'deadline' => $item->deadline?->format('Y-m-d'),
+                    'start_time' => $item->start_time ? substr($item->start_time, 0, 5) : null,
+                    'end_time' => $item->end_time ? substr($item->end_time, 0, 5) : null,
+                    'location' => $item->location,
+                ];
+            });
 
-    return Inertia::render('activities', [
-        'activities' => $activities
-    ]);
-}
+        return Inertia::render('activities', [
+            'activities' => $activities
+        ]);
+    }
 }

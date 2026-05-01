@@ -115,6 +115,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get all guides created by this user
+     */
+    public function guides(): HasMany
+    {
+        return $this->hasMany(Guide::class)->latest();
+    }
+
+    /**
      * Check if user is an admin
      */
     public function isAdmin(): bool

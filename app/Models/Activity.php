@@ -14,13 +14,16 @@ class Activity extends Model
         'title',
         'description',
         'status',
-        'relatable_id',
-        'relatable_type',
         'activity_date',
+        'deadline',
+        'location',
+        'start_time',
+        'end_time',
     ];
 
     protected $casts = [
-        'activity_date' => 'datetime',
+        'activity_date' => 'date',
+        'deadline' => 'date',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -62,10 +65,24 @@ class Activity extends Model
      */
     public function relatable()
     {
-        return match ($this->relatable_type) {
-            'Post' => $this->belongsTo(Post::class, 'relatable_id'),
-            'Achievement' => $this->belongsTo(Achievement::class, 'relatable_id'),
-            default => null,
-        };
+        return $this->morphTo();
+    }
+
+    public function isOverdue(): bool
+{
+        if ($this->type !== 'task') return false;
+
+        return $this->deadline
+            && $this->status !== 'completed'
+            && now()->toDateString() > $this->deadline->toDateString();
+    }
+
+    public function isEventPast(): bool
+    {
+        if ($this->type !== 'event') return false;
+
+        return $this->activity_date < now()->toDateString()
+            && $this->status !== 'cancelled'
+            && $this->status !== 'completed';
     }
 }

@@ -8,6 +8,7 @@ use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\ProfileExtensionController;
+use App\Http\Controllers\GuideController;
 
 // All API routes require authentication via session (shared web middleware)
 Route::middleware('auth')->group(function () {
@@ -73,6 +74,7 @@ Route::middleware('auth')->group(function () {
         Route::put('{document}', [DocumentController::class, 'update']);
         Route::delete('{document}', [DocumentController::class, 'destroy']);
         Route::post('{document}/download', [DocumentController::class, 'download']);
+        Route::patch('{activity}', [ActivityController::class, 'update']);
     });
 
     // Profile Extension Routes
@@ -81,5 +83,15 @@ Route::middleware('auth')->group(function () {
         Route::put('/', [ProfileExtensionController::class, 'update']);
         Route::put('mark-complete', [ProfileExtensionController::class, 'markComplete']);
         Route::get('user/{userId}', [ProfileExtensionController::class, 'showUser']);
+    });
+
+    // Guides Routes
+    Route::prefix('guides')->group(function () {
+        Route::get('/', [GuideController::class, 'index']);
+        Route::post('/', [GuideController::class, 'store']);
+        Route::get('{guide}', [GuideController::class, 'show']);
+        Route::put('{guide}', [GuideController::class, 'update']);
+        Route::delete('{guide}', [GuideController::class, 'destroy']);
+        Route::post('{guide}/download', [GuideController::class, 'download']);
     });
 });

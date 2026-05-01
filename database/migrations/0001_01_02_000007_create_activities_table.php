@@ -17,16 +17,14 @@ return new class extends Migration
             $table->string('type'); // 'login', 'post_created', 'comment_added', 'achievement_unlocked', etc.
             $table->string('title');
             $table->text('description')->nullable();
-            $table->enum('status', ['pending', 'in_progress', 'completed', 'cancelled'])->default('completed');
-            $table->bigInteger('relatable_id')->nullable();
-            $table->string('relatable_type')->nullable(); // 'Post', 'Achievement', etc.
-            $table->timestamp('activity_date');
+            $table->string('location')->nullable();
+            $table->enum('status', ['pending', 'in_progress', 'completed', 'cancelled', 'overdue'])->default('pending');
+            $table->date('activity_date');
             $table->timestamps();
-            
+            $table->date('deadline')->nullable();
             $table->index('user_id');
             $table->index('type');
             $table->index('activity_date');
-            $table->index(['relatable_id', 'relatable_type']);
         });
     }
 

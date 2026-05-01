@@ -1,8 +1,21 @@
 <?php
 
-use Illuminate\Foundation\Inspiring;
-use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
+use App\Models\Activity;
 
-Artisan::command('inspire', function () {
-    $this->comment(Inspiring::quote());
-})->purpose('Display an inspiring quote');
+Schedule::call(function () {
+
+    $now = now();
+
+    Activity::where('type', 'event')
+        ->where('activity_date', '<', now())
+        ->whereNotIn('status', ['cancelled', 'completed'])
+        ->update(['status' => 'completed']);
+
+    Activity::where('type', 'task')
+        ->whereNotIn('status', ['completed', 'cancelled', 'overdue'])
+        ->whereNotNull('deadline')
+        ->whereDate('deadline', '<', now()->toDateString())
+        ->update(['status' => 'overdue']);
+
+})->everyMinute();

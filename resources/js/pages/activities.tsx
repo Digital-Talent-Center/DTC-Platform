@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useRef, useEffect } from 'react';
 import AppLayout from "@/layouts/app-layout";
 import { Head, Link } from "@inertiajs/react";
@@ -5,54 +7,54 @@ import { Head, Link } from "@inertiajs/react";
 type ItemType = 'event' | 'task';
 
 interface ActivityItem {
-  id: number;
+  id: number | string;
   type: ItemType;
   title: string;
   date: string;
-  startTime: string;
-  endTime: string;
+  start_time?: string;
+  end_time?: string;
   description: string;
   location?: string;
   deadline?: string;
-  status: 'upcoming' | 'completed';
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'overdue';
+  activity_date?: string;
 }
 
-const historyItems: ActivityItem[] = [
-  {
-    id: 1, type: 'event', title: 'Rapat Persiapan Awarding ADIKARA 2025',
-    date: '2025-12-24', startTime: '19:00', endTime: '20:00',
-    description: 'Finalisasi detail teknis untuk malam penganugerahan.',
-    location: 'TULT 06.08', status: 'completed',
-  },
-  {
-    id: 2, type: 'task', title: 'Laporan Kemajuan Mingguan',
-    date: '2025-12-20', startTime: '10:00', endTime: '12:00',
-    description: 'Mengumpulkan laporan kemajuan mingguan divisi.',
-    deadline: '2025-12-22', status: 'completed',
-  },
-  {
-    id: 3, type: 'event', title: 'Design System Workshop: Lucid Canvas',
-    date: '2025-12-15', startTime: '10:00', endTime: '12:00',
-    description: 'Exploration of the new design language for DTC platform.',
-    location: 'Creative Hub', status: 'completed',
-  },
-  {
-    id: 4, type: 'task', title: 'API Documentation Refactor',
-    date: '2025-12-10', startTime: '14:00', endTime: '15:30',
-    description: 'Update swagger endpoints for microservices v2.4.',
-    deadline: '2025-12-12', status: 'completed',
-  },
-  {
-    id: 5, type: 'event', title: 'DTC Platform V2 Launch Sync',
-    date: '2025-12-02', startTime: '14:00', endTime: '15:30',
-    description: 'Final checklist before migrating to the new infrastructure.',
-    location: 'GKU Building • Room 402', status: 'completed',
-  },
-];
+function isOverdue(item: ActivityItem) {
+  if (item.status === 'completed' || item.status === 'cancelled') return false;
+  
+  // For tasks, check deadline
+  if (item.type === 'task' && item.deadline) {
+    const today = new Date().toISOString().split('T')[0];
+    return new Date(item.deadline) < new Date();
+  }
+  
+  // For events, check activity_date
+  if (item.type === 'event' && item.date) {
+    return new Date(item.date) < new Date();
+  }
+  
+  return false;
+}
 
-function formatDisplayDate(dateStr: string) {
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+function safeDate(dateStr?: string | null) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function formatDisplayDate(dateStr?: string | null) {
+  if (!dateStr) return '-';
+
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '-';
+
+  return d.toLocaleDateString('id-ID', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
 }
 
 function getTodayStr() {
@@ -71,8 +73,16 @@ function getEndTime(start: string) {
   return end.toTimeString().slice(0, 5);
 }
 
+function normalizeDate(date: any) {
+  if (!date) return null;
+  // Clean microsecond precision that JS can't handle (6 decimals -> 3)
+  const cleaned = typeof date === 'string' ? date.replace(/(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})\.\d{6}Z/, '$1.000Z') : date;
+  const d = new Date(cleaned);
+  return isNaN(d.getTime()) ? null : cleaned;
+}
+
 // ─── Create Modal ───────────────────────────────────────────────
-function CreateModal({ onClose, onSave }: { onClose: () => void; onSave: (item: Omit<ActivityItem, 'id'>) => void }) {
+function CreateModal({ onClose, onSave, loading }: { onClose: () => void; onSave: (item: Omit<ActivityItem, 'id'>) => Promise<void>; loading: boolean }) {
   const [activeType, setActiveType] = useState<ItemType>('event');
   const [title, setTitle] = useState('');
   const [date, setDate] = useState(getTodayStr());
@@ -81,6 +91,7 @@ function CreateModal({ onClose, onSave }: { onClose: () => void; onSave: (item: 
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
   const [deadline, setDeadline] = useState('');
+  const [error, setError] = useState('');
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -89,15 +100,27 @@ function CreateModal({ onClose, onSave }: { onClose: () => void; onSave: (item: 
     return () => document.removeEventListener('keydown', handleKey);
   }, [onClose]);
 
-  const handleSubmit = () => {
-    if (!title.trim()) return;
-    onSave({
-      type: activeType,
-      title: title.trim(),
-      date, startTime, endTime, description,
-      ...(activeType === 'event' ? { location } : { deadline }),
-      status: 'upcoming',
-    });
+  const handleSubmit = async () => {
+    if (!title.trim()) {
+      setError('Title is required');
+      return;
+    }
+    try {
+      setError('');
+      await onSave({
+        type: activeType,
+        title: title.trim(),
+        date,
+        start_time: startTime,
+        end_time: endTime,
+        description,
+        location: activeType === 'event' ? location : undefined,
+        deadline: activeType === 'task' ? deadline : undefined,
+        status: 'pending',
+      });
+    } catch (err: any) {
+      setError(err.message || 'Failed to save activity');
+    }
   };
 
   return (
@@ -105,7 +128,7 @@ function CreateModal({ onClose, onSave }: { onClose: () => void; onSave: (item: 
       <div ref={modalRef} className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-6 pb-2">
-          <h2 className="text-lg font-bold text-gray-900">Create New</h2>
+          <h2 className="text-lg font-bold text-gray-900">Create New {activeType === 'event' ? 'Event' : 'Task'}</h2>
           <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
@@ -126,6 +149,15 @@ function CreateModal({ onClose, onSave }: { onClose: () => void; onSave: (item: 
             </button>
           ))}
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="px-6 pb-4">
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+              {error}
+            </div>
+          </div>
+        )}
 
         {/* Form Fields */}
         <div className="px-6 pb-6 space-y-4">
@@ -178,10 +210,11 @@ function CreateModal({ onClose, onSave }: { onClose: () => void; onSave: (item: 
 
         {/* Footer */}
         <div className="px-6 pb-6 flex items-center justify-end gap-3">
-          <button onClick={onClose} className="px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-xl transition-colors">Cancel</button>
-          <button onClick={handleSubmit} disabled={!title.trim()}
-            className="px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-xl shadow-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed">
-            Save
+          <button onClick={onClose} disabled={loading} className="px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-xl transition-colors disabled:opacity-50">Cancel</button>
+          <button onClick={handleSubmit} disabled={!title.trim() || loading}
+            className="px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-xl shadow-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2">
+            {loading && <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
+            {loading ? 'Saving...' : 'Save'}
           </button>
         </div>
       </div>
@@ -193,8 +226,11 @@ function CreateModal({ onClose, onSave }: { onClose: () => void; onSave: (item: 
 export default function ActivitiesPage() {
   const [showModal, setShowModal] = useState(false);
   const [createDropdown, setCreateDropdown] = useState(false);
-  const [items, setItems] = useState<ActivityItem[]>(historyItems);
+  const [items, setItems] = useState<ActivityItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [filterType, setFilterType] = useState<'all' | 'event' | 'task'>('all');
+  const [error, setError] = useState('');
   const dropRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -203,12 +239,171 @@ export default function ActivitiesPage() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  const handleSave = (item: Omit<ActivityItem, 'id'>) => {
-    setItems(prev => [{ ...item, id: Date.now() }, ...prev]);
-    setShowModal(false);
+  // Fetch activities from API
+  useEffect(() => {
+    const fetchActivities = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/activities');
+        if (!response.ok) throw new Error('Failed to fetch activities');
+        const data = await response.json();
+        
+        // Transform API data to component format
+        const list = data.data ?? [];
+        
+        const transformed = (Array.isArray(list) ? list : list.data ?? []).map((item: any) => {
+          const normalizedStatus = (item.status || '').toLowerCase();
+
+          return {
+            id: item.id,
+            type: item.type === 'task' ? 'task' : 'event',
+            title: item.title,
+            date: normalizeDate(item.activityDate ?? item.activity_date),
+            start_time: item.startTime ?? item.start_time ?? null,
+            end_time: item.endTime ?? item.end_time ?? null,
+            description: item.description || '',
+            location: item.location || undefined,
+            deadline: normalizeDate(item.deadline) ?? undefined,
+
+            status: ['pending','in_progress','completed','cancelled','overdue'].includes(normalizedStatus)
+              ? normalizedStatus
+              : 'pending',
+          };
+      });
+        setItems(transformed);
+      } catch (err: any) {
+        setError(err.message);
+        console.error('Error fetching activities:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchActivities();
+  }, []);
+
+  const handleSave = async (item: Omit<ActivityItem, 'id'>) => {
+    try {
+      setSaving(true);
+      
+      const payload = {
+        type: item.type,
+        title: item.title,
+        description: item.description,
+        activity_date: item.date,
+        status: item.status,
+        start_time: item.start_time,
+        end_time: item.end_time,
+        location: item.location || null,
+        deadline: item.deadline ?? null
+      };
+
+      const response = await fetch('/api/activities', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': document
+            .querySelector('meta[name="csrf-token"]')
+            ?.getAttribute('content') || '',
+        },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        // Try to parse as JSON, but handle HTML error pages gracefully
+        let errorMessage = 'Failed to create activity';
+        try {
+          const contentType = response.headers.get('content-type');
+          if (contentType?.includes('application/json')) {
+            const error = await response.json();
+            errorMessage = error.message || error.errors || 'Failed to create activity';
+          } else {
+            errorMessage = `Server error: ${response.status} ${response.statusText}`;
+          }
+        } catch (parseError) {
+          errorMessage = `Server error: ${response.status} ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+
+      const newItem = data.data;
+
+      setItems(prev => [{
+        id: newItem.id,
+        type: newItem.type,
+        title: newItem.title,
+        date: newItem.activity_date ?? null,
+        start_time: newItem.start_time ?? null,
+        end_time: newItem.end_time ?? null,
+        description: newItem.description || '',
+        location: newItem.location || undefined,
+        deadline: newItem.deadline ?? undefined,
+        status: (newItem.status || 'pending').toLowerCase(),
+      }, ...prev]);
+
+      setShowModal(false);
+    } catch (err: any) {
+      throw new Error(err.message || 'Failed to save activity');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const filtered = filterType === 'all' ? items : items.filter(i => i.type === filterType);
+  const handleStatusChange = async (id: number | string, newStatus: 'in_progress' | 'completed' | 'cancelled') => {
+    try {
+      const apiStatus = newStatus === 'in_progress' ? 'in_progress' : newStatus;
+      const response = await fetch(`/api/activities/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': document
+            .querySelector('meta[name="csrf-token"]')
+            ?.getAttribute('content') || '',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ status: apiStatus }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update status');
+      }
+
+      const updatedItem = await response.json();
+      setItems(prev => prev.map(item => 
+        item.id === id ? {
+          ...item,
+          status: newStatus
+        } : item
+      ));
+    } catch (err: any) {
+      console.error('Error updating status:', err);
+      alert('Failed to update status: ' + err.message);
+    }
+  };
+
+  const startTask = async (id: number | string) => {
+    await handleStatusChange(id, 'in_progress');
+  };
+
+  const completeTask = async (id: number | string) => {
+    await handleStatusChange(id, 'completed');
+  };
+
+  const cancelEvent = async (id: number | string) => {
+    await handleStatusChange(id, 'cancelled');
+  };
+
+  const enrichedItems = items
+  .filter(item => filterType === 'all' || item.type === filterType)
+  .map(item => {
+    if (isOverdue(item)) {
+      return { ...item, status: 'overdue' as const };
+    }
+    return item;
+  });
 
   return (
     <AppLayout>
@@ -260,12 +455,23 @@ export default function ActivitiesPage() {
               {label}
             </button>
           ))}
-          <span className="ml-auto text-xs text-gray-400">{filtered.length} items</span>
+          <span className="ml-auto text-xs text-gray-400">{enrichedItems.length} items</span>
         </div>
 
         {/* Items List */}
         <div className="space-y-3">
-          {filtered.map((item) => (
+          {enrichedItems.map((item) => {
+          const displayStatus = item.status === 'overdue'
+            ? 'OVERDUE'
+            : item.status === 'pending'
+            ? 'PENDING'
+            : item.status === 'in_progress'
+            ? 'IN PROGRESS'
+            : item.status === 'completed'
+            ? 'COMPLETED'
+            : 'CANCELLED';
+
+          return (
             <div key={item.id} className="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-md transition-shadow flex items-start gap-4">
               {/* Type Icon */}
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${item.type === 'event' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'}`}>
@@ -282,20 +488,32 @@ export default function ActivitiesPage() {
                   <span className={`px-2.5 py-0.5 text-[10px] font-bold tracking-wider rounded-full ${item.type === 'event' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>
                     {item.type === 'event' ? 'EVENT' : 'TASK'}
                   </span>
-                  <span className={`px-2.5 py-0.5 text-[10px] font-bold tracking-wider rounded-full ${item.status === 'upcoming' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                    {item.status === 'upcoming' ? 'UPCOMING' : 'COMPLETED'}
-                  </span>
+                  <span className={`px-2.5 py-0.5 text-[10px] font-bold tracking-wider rounded-full ${
+                  displayStatus === 'OVERDUE'
+                    ? 'bg-red-100 text-red-700'
+                    : displayStatus === 'PENDING'
+                    ? 'bg-blue-100 text-blue-700'
+                    : displayStatus === 'IN PROGRESS'
+                    ? 'bg-yellow-100 text-yellow-700'
+                    : displayStatus === 'COMPLETED'
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-red-100 text-red-700'
+                }`}>
+                  {displayStatus}
+                </span>
                 </div>
                 <h3 className="text-base font-semibold text-gray-900 mb-1">{item.title}</h3>
                 <p className="text-sm text-gray-500 line-clamp-1 mb-2">{item.description}</p>
                 <div className="flex flex-wrap items-center gap-4 text-xs text-gray-400">
                   <span className="flex items-center gap-1.5">
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>
-                    {formatDisplayDate(item.date)}
+                    {safeDate(item.date) ? formatDisplayDate(item.date) : '-'}
                   </span>
                   <span className="flex items-center gap-1.5">
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    {item.startTime} – {item.endTime}
+                    {item.start_time && item.end_time
+                      ? `${item.start_time.slice(0,5)} – ${item.end_time.slice(0,5)}`
+                      : '-'}
                   </span>
                   {item.location && (
                     <span className="flex items-center gap-1.5">
@@ -303,18 +521,35 @@ export default function ActivitiesPage() {
                       {item.location}
                     </span>
                   )}
-                  {item.deadline && (
+                  {safeDate(item.deadline) && (
                     <span className="flex items-center gap-1.5 text-amber-600">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m0-10.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.75c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.75h-.152c-3.196 0-6.1-1.249-8.25-3.286zm0 13.036h.008v.008H12v-.008z" /></svg>
-                      Deadline: {formatDisplayDate(item.deadline)}
+                      Deadline: {item.deadline ? formatDisplayDate(item.deadline) : '-'}
                     </span>
+                  )}
+                </div>
+                {/* Action Buttons */}
+                <div className="mt-4 flex items-center gap-2">
+                  {item.type === 'task' && (item.status === 'pending' || item.status === 'overdue') && (
+                    <button onClick={() => startTask(item.id)} className="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-medium rounded-full transition-colors">
+                      Start
+                    </button>
+                  )}
+                  {item.type === 'task' && item.status === 'in_progress' && (
+                    <button onClick={() => completeTask(item.id)} className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-medium rounded-full transition-colors">
+                      Complete
+                    </button>
+                  )}
+                  {item.type === 'event' && (item.status === 'pending') && (
+                    <button onClick={() => cancelEvent(item.id)} className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-medium rounded-full transition-colors">
+                      Cancel
+                    </button>
                   )}
                 </div>
               </div>
             </div>
-          ))}
+          )})}
 
-          {filtered.length === 0 && (
+          {enrichedItems.length === 0 && (
             <div className="bg-white rounded-2xl border border-gray-100 p-12 flex flex-col items-center justify-center gap-3">
               <div className="w-14 h-14 rounded-full bg-gray-50 flex items-center justify-center text-gray-300">
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>
@@ -326,7 +561,7 @@ export default function ActivitiesPage() {
       </div>
 
       {/* Create Modal */}
-      {showModal && <CreateModal onClose={() => setShowModal(false)} onSave={handleSave} />}
+      {showModal && <CreateModal onClose={() => setShowModal(false)} onSave={handleSave} loading={saving} />}
     </AppLayout>
   );
 }
