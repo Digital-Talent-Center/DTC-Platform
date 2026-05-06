@@ -52,4 +52,10 @@ Route::middleware(['auth'])->group(function () {
 });
 
 require __DIR__.'/settings.php';
+
+// Route sementara buat ngetes tampilan admin dashboard
+Route::get('/admin/dashboard', function () {
+    return Inertia::render('admin/dashboard');
+})->name('admin.dashboard');
+
 require __DIR__.'/auth.php';

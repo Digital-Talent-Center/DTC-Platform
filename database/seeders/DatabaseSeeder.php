@@ -24,6 +24,15 @@ class DatabaseSeeder extends Seeder
             'email_verified_at' => now(),
         ]);
 
+        // Create an admin user
+        $admin = User::create([
+            'name' => 'Admin User',
+            'email' => 'admin@example.com',
+            'password' => bcrypt('password'),
+            'email_verified_at' => now(),
+            'role' => 'admin',
+        ]);
+
         // Create profile extension
         ProfileExtension::create([
             'user_id' => $user->id,
