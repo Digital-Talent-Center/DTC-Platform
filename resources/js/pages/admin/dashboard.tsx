@@ -124,7 +124,7 @@ export default function AdminDashboardPage() {
                         </table>
                     </div>
                     <div className="px-6 py-4 border-t border-gray-50 flex justify-center">
-                        <Link href="#" className="text-sm text-gray-500 hover:text-amber-600 font-medium flex items-center gap-1.5 transition-colors">
+                        <Link href="/admin/students" className="text-sm text-gray-500 hover:text-amber-600 font-medium flex items-center gap-1.5 transition-colors">
                             Lihat Semua Data
                             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
                         </Link>

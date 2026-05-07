@@ -64,6 +64,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/admin/achievements', function () {
             return Inertia::render('admin/Achievement-Management');
         })->name('admin.achievements');
+
+        Route::get('/admin/students', function () {
+            return Inertia::render('admin/Student-Management');
+        })->name('admin.students');
     });
 });
 

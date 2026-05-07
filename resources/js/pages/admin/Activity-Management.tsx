@@ -37,9 +37,9 @@ export default function ReportListPage() {
     return (
         <AppLayout>
             <Head title="Manajemen Aktivitas" />
-            
+
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-                
+
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">
                     <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Manajemen Aktivitas</h1>
@@ -59,7 +59,7 @@ export default function ReportListPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {reports.slice(0, visibleCount).map((report) => (
                                 <div key={report.id} className="bg-[#F8F9FA] p-8 rounded-sm flex flex-col h-full relative group">
-                                    
+
                                     {/* Card Header: Avatar & Name */}
                                     <div className="flex items-start gap-4 mb-6">
                                         <div className="w-11 h-11 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
@@ -81,7 +81,7 @@ export default function ReportListPage() {
 
                                     {/* Action Button */}
                                     <div className="flex justify-end mt-auto">
-                                        <button 
+                                        <button
                                             onClick={() => handleDelete(report.id)}
                                             className="w-10 h-10 rounded-full bg-[#C23B22] text-white flex items-center justify-center hover:bg-red-800 transition-colors shadow-sm cursor-pointer"
                                             title="Hapus Laporan"
@@ -96,7 +96,7 @@ export default function ReportListPage() {
                         {/* Load More Button */}
                         {visibleCount < reports.length && (
                             <div className="mt-12 flex justify-center">
-                                <button 
+                                <button
                                     onClick={handleLoadMore}
                                     className="inline-flex items-center gap-2 px-6 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-bold rounded-full hover:bg-gray-50 hover:text-gray-900 transition-all shadow-sm cursor-pointer"
                                 >

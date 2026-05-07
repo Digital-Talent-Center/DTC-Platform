@@ -89,13 +89,13 @@ export default function AchievementManagement() {
     return (
         <AppLayout>
             <Head title="Manajemen Pencapaian" />
-            
+
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 min-h-screen">
-                
+
                 {/* Header Section */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10">
                     <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight">Manajemen Pencapaian</h1>
-                    
+
                     {/* Badges */}
                     <div className="flex items-center gap-3 mt-4 sm:mt-0">
                         <div className="bg-gray-200/80 px-4 py-2 rounded-full flex items-center gap-2">
@@ -113,7 +113,7 @@ export default function AchievementManagement() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {achievements.map((achievement) => (
                         <div key={achievement.id} className="bg-white rounded-3xl p-6 shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100 flex flex-col">
-                            
+
                             {/* Icon Trophy */}
                             <div className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center mb-5 shadow-sm">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-indigo-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -143,13 +143,13 @@ export default function AchievementManagement() {
 
                             {/* Buttons */}
                             <div className="grid grid-cols-2 gap-4">
-                                <button 
+                                <button
                                     onClick={() => handleReject(achievement.id)}
                                     className="py-3 px-4 rounded-full border-[1.5px] border-red-200 text-red-600 font-bold text-sm tracking-wide hover:bg-red-50 hover:border-red-300 transition-colors cursor-pointer"
                                 >
                                     Reject
                                 </button>
-                                <button 
+                                <button
                                     onClick={() => handleApprove(achievement.id)}
                                     className="py-3 px-4 rounded-full bg-[#f6931c] text-white font-bold text-sm tracking-wide hover:bg-[#e08418] transition-colors shadow-sm cursor-pointer"
                                 >
@@ -170,7 +170,7 @@ export default function AchievementManagement() {
                 {/* Load More Button */}
                 {achievements.length > 0 && hasMore && (
                     <div className="mt-12 flex justify-center">
-                        <button 
+                        <button
                             onClick={handleLoadMore}
                             className="bg-white hover:bg-gray-50 text-gray-800 font-bold text-sm tracking-wide py-3.5 px-8 rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-100 flex items-center gap-2 transition-colors cursor-pointer"
                         >
