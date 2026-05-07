@@ -57,9 +57,13 @@ Route::middleware(['auth'])->group(function () {
             return Inertia::render('admin/dashboard');
         })->name('admin.dashboard');
 
-        Route::get('/admin/reports', function () {
-            return Inertia::render('admin/report-list');
-        })->name('admin.reports');
+        Route::get('/admin/activities', function () {
+            return Inertia::render('admin/Activity-Management');
+        })->name('admin.activities');
+
+        Route::get('/admin/achievements', function () {
+            return Inertia::render('admin/Achievement-Management');
+        })->name('admin.achievements');
     });
 });
 
