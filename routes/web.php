@@ -35,6 +35,10 @@ Route::middleware(['auth'])->group(function () {
         return Inertia::render('achievements');
     })->name('dashboard.achievements');
 
+    Route::get('dashboard/achievements/new', function () {
+        return Inertia::render('submit-achievement');
+    })->name('dashboard.achievements.new');
+
     Route::get('dashboard/co-guide', function () {
         return Inertia::render('co-guide');
     })->name('dashboard.co-guide');
@@ -42,6 +46,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('dashboard/co-library', function () {
         return Inertia::render('co-library');
     })->name('dashboard.co-library');
+
+    Route::get('dashboard/premium-post', function () {
+        return Inertia::render('premium-post');
+    })->name('dashboard.premium-post');
 
     Route::get('notifications', function () {
         return Inertia::render('notifications');

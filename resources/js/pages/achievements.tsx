@@ -145,11 +145,9 @@ export default function AchievementsPage() {
           ))}
         </div>
 
-        {/* Bottom Row */}
+        {/* Featured Card */}
         {activeTab === 'Achievement Collection' && (
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 mt-5">
-            {/* Featured Card */}
-          <div className="lg:col-span-3 bg-white rounded-2xl border border-gray-100 p-6 flex flex-col sm:flex-row gap-5">
+          <div className="bg-white rounded-2xl border border-gray-100 p-6 flex flex-col sm:flex-row gap-5 mt-5">
             <div className="flex-shrink-0 w-full sm:w-48 h-40 rounded-xl bg-gradient-to-br from-green-100 to-emerald-200 flex items-center justify-center">
               <svg xmlns="http://www.w3.org/2000/svg" className="w-16 h-16 text-green-400/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={0.8}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 7.5h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" />
@@ -179,18 +177,6 @@ export default function AchievementsPage() {
               </div>
               <button className="px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-full shadow-sm transition-all">Upload Final Deck</button>
             </div>
-          </div>
-
-          {/* Propose New */}
-          <Link href="/dashboard/achievements/new" className="lg:col-span-2 bg-amber-50/50 rounded-2xl border-2 border-dashed border-amber-200 p-6 flex flex-col items-center justify-center gap-3 hover:bg-amber-50 hover:border-amber-300 transition-all group">
-            <div className="w-12 h-12 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-400 group-hover:text-amber-500 group-hover:border-amber-300 transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-            </div>
-            <div className="text-center">
-              <p className="font-semibold text-gray-800 text-sm">Propose New Achievement</p>
-              <p className="text-xs text-gray-400 mt-0.5">Submit a new internal request</p>
-            </div>
-          </Link>
           </div>
         )}
       </div>
