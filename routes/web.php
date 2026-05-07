@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\ActivityController;
+use App\Http\Middleware\IsAdmin;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -49,13 +50,19 @@ Route::middleware(['auth'])->group(function () {
     Route::get('timeline', function () {
         return Inertia::render('Timeline/Index');
     })->name('timeline');
+
+    // Admin Routes
+    Route::middleware([IsAdmin::class])->group(function () {
+        Route::get('/admin/dashboard', function () {
+            return Inertia::render('admin/dashboard');
+        })->name('admin.dashboard');
+
+        Route::get('/admin/reports', function () {
+            return Inertia::render('admin/report-list');
+        })->name('admin.reports');
+    });
 });
 
 require __DIR__.'/settings.php';
-
-// Route sementara buat ngetes tampilan admin dashboard
-Route::get('/admin/dashboard', function () {
-    return Inertia::render('admin/dashboard');
-})->name('admin.dashboard');
 
 require __DIR__.'/auth.php';
