@@ -2,7 +2,10 @@
 
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Http\Controllers\AchievementController;
 use App\Http\Controllers\ActivityController;
+use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\UsersController;
 use App\Http\Middleware\IsAdmin;
 
 Route::get('/', function () {
@@ -61,21 +64,15 @@ Route::middleware(['auth'])->group(function () {
 
     // Admin Routes
     Route::middleware([IsAdmin::class])->group(function () {
-        Route::get('/admin/dashboard', function () {
-            return Inertia::render('admin/dashboard');
-        })->name('admin.dashboard');
+        Route::get('/admin/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
 
         Route::get('/admin/activities', function () {
             return Inertia::render('admin/Activity-Management');
         })->name('admin.activities');
 
-        Route::get('/admin/achievements', function () {
-            return Inertia::render('admin/Achievement-Management');
-        })->name('admin.achievements');
+        Route::get('/admin/achievements', [AchievementController::class, 'adminIndex'])->name('admin.achievements');
 
-        Route::get('/admin/students', function () {
-            return Inertia::render('admin/Student-Management');
-        })->name('admin.students');
+        Route::get('/admin/students', [UsersController::class, 'index'])->name('admin.students');
     });
 });
 

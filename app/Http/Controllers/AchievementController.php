@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Achievement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class AchievementController extends Controller
 {
@@ -122,6 +123,39 @@ class AchievementController extends Controller
 
         return response()->json([
             'data' => $stats,
+        ]);
+    }
+
+    /**
+     * Get all pending achievements for Admin Dashboard
+     */
+    public function adminIndex()
+    {
+        // Mengambil semua achievement yang statusnya pending beserta relasi user dan profilnya
+        $achievementsData = Achievement::with(['user.profileExtension'])
+            ->where('status', 'pending')
+            ->latest()
+            ->get();
+
+        $achievements = $achievementsData->map(function ($achievement) {
+            return [
+                'id' => $achievement->id,
+                'title' => $achievement->title,
+                'user' => $achievement->user->name ?? 'Unknown',
+                'major' => $achievement->user->profileExtension->major ?? 'N/A',
+                'file' => $achievement->badge_icon ?? 'No File',
+                'fileSize' => 'N/A',
+                'uploadedAt' => $achievement->created_at->diffForHumans(),
+            ];
+        });
+
+        $pendingCount = Achievement::where('status', 'pending')->count();
+        $approvedCount = Achievement::where('status', 'approved')->count();
+
+        return Inertia::render('admin/Achievement-Management', [
+            'initialAchievements' => $achievements,
+            'initialPendingCount' => $pendingCount,
+            'initialApprovedCount' => $approvedCount,
         ]);
     }
 }

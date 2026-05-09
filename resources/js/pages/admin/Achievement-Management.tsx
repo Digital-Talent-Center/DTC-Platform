@@ -2,69 +2,27 @@ import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Head } from '@inertiajs/react';
 
-// Dummy Data matches the screenshot
-const initialAchievements = [
-    {
-        id: 1,
-        title: "Juara 1 LKTIN Nasional 2024",
-        user: "Budi Santoso",
-        major: "Informatika",
-        file: "sertifikat_juara_1.pdf",
-        fileSize: "2.4 MB",
-        uploadedAt: "Uploaded 2h ago"
-    },
-    {
-        id: 2,
-        title: "Medali Emas Hackathon Global",
-        user: "Siti Aminah",
-        major: "Teknologi Informasi",
-        file: "global_medal_hack.pdf",
-        fileSize: "1.8 MB",
-        uploadedAt: "Uploaded 5h ago"
-    },
-    {
-        id: 3,
-        title: "Medali Emas Hackathon Global",
-        user: "Joko",
-        major: "Data Sains",
-        file: "global_medal_hack.pdf",
-        fileSize: "1.8 MB",
-        uploadedAt: "Uploaded 5h ago"
-    },
-    {
-        id: 4,
-        title: "Best Presentation Hackathon Global",
-        user: "Rizky Pratama",
-        major: "Rekayasa Perangkat Lunak",
-        file: "best_presentation.pdf",
-        fileSize: "4.1 MB",
-        uploadedAt: "Uploaded 1d ago"
-    },
-    {
-        id: 5,
-        title: "Penulis Jurnal Internasional Q1",
-        user: "Fajar Nugraha",
-        major: "Bioteknologi",
-        file: "ieee_publication_2024.pdf",
-        fileSize: "3.7 MB",
-        uploadedAt: "Uploaded 4d ago"
-    },
-    {
-        id: 6,
-        title: "Penulis Jurnal Internasional Q1",
-        user: "Fajar Nugraha",
-        major: "Bioteknologi",
-        file: "ieee_publication_2024.pdf",
-        fileSize: "3.7 MB",
-        uploadedAt: "Uploaded 4d ago"
-    }
-];
+interface AchievementData {
+    id: number;
+    title: string;
+    user: string;
+    major: string;
+    file: string;
+    fileSize: string;
+    uploadedAt: string;
+}
 
-export default function AchievementManagement() {
-    const [achievements, setAchievements] = useState(initialAchievements);
-    const [approvedCount, setApprovedCount] = useState(128);
-    const [pendingCount, setPendingCount] = useState(12);
-    const [hasMore, setHasMore] = useState(true);
+interface Props {
+    initialAchievements: AchievementData[];
+    initialPendingCount: number;
+    initialApprovedCount: number;
+}
+
+export default function AchievementManagement({ initialAchievements, initialPendingCount, initialApprovedCount }: Props) {
+    const [achievements, setAchievements] = useState<AchievementData[]>(initialAchievements || []);
+    const [approvedCount, setApprovedCount] = useState(initialApprovedCount || 0);
+    const [pendingCount, setPendingCount] = useState(initialPendingCount || 0);
+    const [hasMore, setHasMore] = useState(false); // Can be driven by pagination later
 
     const handleApprove = (id: number) => {
         setAchievements(prev => prev.filter(a => a.id !== id));
@@ -75,15 +33,6 @@ export default function AchievementManagement() {
     const handleReject = (id: number) => {
         setAchievements(prev => prev.filter(a => a.id !== id));
         setPendingCount(prev => Math.max(0, prev - 1));
-    };
-
-    const handleLoadMore = () => {
-        const newBatch = initialAchievements.map((item, index) => ({
-            ...item,
-            id: Date.now() + index // Ensure unique IDs
-        }));
-        setAchievements(prev => [...prev, ...newBatch]);
-        setHasMore(false); // Hide button after loading the remaining 6 items
     };
 
     return (
@@ -167,20 +116,7 @@ export default function AchievementManagement() {
                     </div>
                 )}
 
-                {/* Load More Button */}
-                {achievements.length > 0 && hasMore && (
-                    <div className="mt-12 flex justify-center">
-                        <button
-                            onClick={handleLoadMore}
-                            className="bg-white hover:bg-gray-50 text-gray-800 font-bold text-sm tracking-wide py-3.5 px-8 rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-100 flex items-center gap-2 transition-colors cursor-pointer"
-                        >
-                            Load More Requests
-                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-gray-500 stroke-[2.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                            </svg>
-                        </button>
-                    </div>
-                )}
+
             </div>
         </AppLayout>
     );

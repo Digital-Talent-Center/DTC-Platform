@@ -2,24 +2,20 @@ import { useState, useMemo } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Head, Link } from '@inertiajs/react';
 
-// Dummy Data
-const generateDummyStudents = () => {
-    const majors = ["Informatika", "Teknologi Informasi", "Data Sains", "Sistem Informasi", "Rekayasa Perangkat Lunak"];
-    const names = ["Ahmad Rizky", "Siti Aminah", "Budi Santoso", "Larasati Putri", "Dian Tanujaya", "Fajar Nugraha", "Rina Wati", "Andi Pratama", "Maya Sari", "Kevin Sanjaya", "Dewi Lestari", "Rio Haryanto", "Putri Kusuma", "Agus Setiawan", "Citra Kirana", "Hendra Gunawan", "Nadia Vega", "Reza Rahadian", "Tara Basro", "Vino G. Bastian", "Wulan Guritno", "Yayan Ruhian", "Zaskia Sungkar", "Iko Uwais", "Julie Estelle"];
+interface Student {
+    id: number;
+    name: string;
+    major: string;
+    nim: string;
+    status: string;
+}
 
-    return names.map((name, index) => {
-        const id = index + 1;
-        const major = majors[index % majors.length];
-        const nim = `2024100${(100 + id).toString().substring(1)}`;
-        const status = index % 5 === 2 ? 'SUSPENDED' : 'ACTIVE'; // Some suspended
-        return { id, name, major, nim, status };
-    });
-};
+interface Props {
+    students: Student[];
+}
 
-const initialStudents = generateDummyStudents();
-
-export default function StudentManagement() {
-    const [students, setStudents] = useState(initialStudents);
+export default function StudentManagement({ students: initialStudents }: Props) {
+    const [students, setStudents] = useState<Student[]>(initialStudents || []);
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState("Aktif"); // 'Semua', 'Aktif', 'Suspended'
     const [sortFilter, setSortFilter] = useState("none"); // 'none', 'az', 'za', 'nim_asc', 'nim_desc'
@@ -275,8 +271,8 @@ export default function StudentManagement() {
                                                 key={pageNum}
                                                 onClick={() => setCurrentPage(pageNum)}
                                                 className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold cursor-pointer transition-colors ${currentPage === pageNum
-                                                        ? "bg-[#7b5b00] text-white shadow-sm"
-                                                        : "text-gray-700 hover:bg-gray-100"
+                                                    ? "bg-[#7b5b00] text-white shadow-sm"
+                                                    : "text-gray-700 hover:bg-gray-100"
                                                     }`}
                                             >
                                                 {pageNum}
