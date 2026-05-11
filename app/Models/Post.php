@@ -50,6 +50,14 @@ class Post extends Model
     }
 
     /**
+     * Get all reports for this post
+     */
+    public function reports(): HasMany
+    {
+        return $this->hasMany(Report::class);
+    }
+
+    /**
      * Check if user has liked this post
      */
     public function isLikedBy(User $user): bool
@@ -57,6 +65,26 @@ class Post extends Model
         return $this->likes()
             ->where('user_id', $user->id)
             ->exists();
+    }
+
+    /**
+     * Check if post has pending reports
+     */
+    public function hasPendingReports(): bool
+    {
+        return $this->reports()
+            ->where('status', 'pending')
+            ->exists();
+    }
+
+    /**
+     * Get pending reports count
+     */
+    public function getPendingReportsCount(): int
+    {
+        return $this->reports()
+            ->where('status', 'pending')
+            ->count();
     }
 
     /**

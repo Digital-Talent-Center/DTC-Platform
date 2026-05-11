@@ -9,6 +9,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\ProfileExtensionController;
 use App\Http\Controllers\GuideController;
+use App\Http\Controllers\ReportController;
 
 // All API routes require authentication via session (shared web middleware)
 Route::middleware('auth')->group(function () {
@@ -32,6 +33,17 @@ Route::middleware('auth')->group(function () {
         Route::post('{comment}/like', [CommentController::class, 'toggleLike']);
     });
 
+    // Reports Routes — for reporting posts
+    Route::prefix('reports')->group(function () {
+        Route::get('/', [ReportController::class, 'index']); // Admin only
+        Route::post('/', [ReportController::class, 'store']); // Create report
+        Route::get('my-reports', [ReportController::class, 'myReports']); // User's own reports
+        Route::get('statistics', [ReportController::class, 'statistics']); // Admin only
+        Route::get('{report}', [ReportController::class, 'show']);
+        Route::put('{report}/status', [ReportController::class, 'updateStatus']); // Admin only
+        Route::get('post/{post}', [ReportController::class, 'showPostReports']); // Admin - view reports for a post
+    });
+
     // Achievements Routes — static routes BEFORE {achievement} parameter
     Route::prefix('achievements')->group(function () {
         Route::get('/', [AchievementController::class, 'index']);
@@ -47,9 +59,13 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [ActivityController::class, 'index']);
         Route::post('/', [ActivityController::class, 'store']);
         Route::get('statistics', [ActivityController::class, 'statistics']);
+        Route::get('upcoming', [ActivityController::class, 'upcoming']); // Get upcoming activities
+        Route::get('completed', [ActivityController::class, 'completed']); // Get completed activities
+        Route::get('overdue', [ActivityController::class, 'overdue']); // Get overdue activities
         Route::get('{activity}', [ActivityController::class, 'show']);
         Route::put('{activity}', [ActivityController::class, 'update']);
         Route::delete('{activity}', [ActivityController::class, 'destroy']);
+        Route::patch('{activity}/status', [ActivityController::class, 'updateStatus']); // Update status
     });
 
     // Notifications Routes — static routes BEFORE {notification} parameter
@@ -74,7 +90,6 @@ Route::middleware('auth')->group(function () {
         Route::put('{document}', [DocumentController::class, 'update']);
         Route::delete('{document}', [DocumentController::class, 'destroy']);
         Route::post('{document}/download', [DocumentController::class, 'download']);
-        Route::patch('{activity}', [ActivityController::class, 'update']);
     });
 
     // Profile Extension Routes

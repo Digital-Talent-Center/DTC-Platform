@@ -219,4 +219,136 @@ class ActivityController extends Controller
             'activities' => $activities
         ]);
     }
+
+    /**
+     * Get upcoming activities for current user
+     */
+    public function upcoming(Request $request)
+    {
+        $userId = Auth::id();
+
+        $activities = Activity::query()
+            ->where('user_id', $userId)
+            ->upcoming()
+            ->when($request->filled('type'), fn ($q) =>
+                $q->where('type', $request->type)
+            )
+            ->paginate(15);
+
+        $formatted = $activities->through(function ($item) {
+            return [
+                'id' => $item->id,
+                'type' => $item->type,
+                'title' => $item->title,
+                'description' => $item->description,
+                'status' => $item->status,
+                'activity_date' => $item->activity_date?->format('Y-m-d'),
+                'deadline' => $item->deadline?->format('Y-m-d'),
+                'start_time' => $item->start_time ? substr($item->start_time, 0, 5) : null,
+                'end_time' => $item->end_time ? substr($item->end_time, 0, 5) : null,
+                'location' => $item->location,
+                'created_at' => $item->created_at?->toISOString(),
+            ];
+        });
+
+        return $this->paginatedResponse($formatted);
+    }
+
+    /**
+     * Get completed activities for current user
+     */
+    public function completed(Request $request)
+    {
+        $userId = Auth::id();
+
+        $activities = Activity::query()
+            ->where('user_id', $userId)
+            ->completed()
+            ->when($request->filled('type'), fn ($q) =>
+                $q->where('type', $request->type)
+            )
+            ->latest('updated_at')
+            ->paginate(15);
+
+        $formatted = $activities->through(function ($item) {
+            return [
+                'id' => $item->id,
+                'type' => $item->type,
+                'title' => $item->title,
+                'description' => $item->description,
+                'status' => $item->status,
+                'activity_date' => $item->activity_date?->format('Y-m-d'),
+                'deadline' => $item->deadline?->format('Y-m-d'),
+                'start_time' => $item->start_time ? substr($item->start_time, 0, 5) : null,
+                'end_time' => $item->end_time ? substr($item->end_time, 0, 5) : null,
+                'location' => $item->location,
+                'completed_at' => $item->updated_at?->toISOString(),
+            ];
+        });
+
+        return $this->paginatedResponse($formatted);
+    }
+
+    /**
+     * Get overdue activities for current user
+     */
+    public function overdue(Request $request)
+    {
+        $userId = Auth::id();
+
+        $activities = Activity::query()
+            ->where('user_id', $userId)
+            ->overdue()
+            ->when($request->filled('type'), fn ($q) =>
+                $q->where('type', $request->type)
+            )
+            ->latest('activity_date')
+            ->paginate(15);
+
+        $formatted = $activities->through(function ($item) {
+            return [
+                'id' => $item->id,
+                'type' => $item->type,
+                'title' => $item->title,
+                'description' => $item->description,
+                'status' => $item->status,
+                'activity_date' => $item->activity_date?->format('Y-m-d'),
+                'deadline' => $item->deadline?->format('Y-m-d'),
+                'start_time' => $item->start_time ? substr($item->start_time, 0, 5) : null,
+                'end_time' => $item->end_time ? substr($item->end_time, 0, 5) : null,
+                'location' => $item->location,
+                'is_overdue' => $item->isPastDeadline(),
+            ];
+        });
+
+        return $this->paginatedResponse($formatted);
+    }
+
+    /**
+     * Update activity status
+     */
+    public function updateStatus(Request $request, Activity $activity)
+    {
+        if ($activity->user_id !== Auth::id()) {
+            return $this->messageResponse('Unauthorized', 403);
+        }
+
+        $validated = $request->validate([
+            'status' => 'required|in:pending,in_progress,completed,cancelled,overdue',
+        ]);
+
+        try {
+            $activity->update(['status' => $validated['status']]);
+
+            return $this->apiResponse([
+                'id' => $activity->id,
+                'status' => $activity->status,
+                'updated_at' => $activity->updated_at->toISOString(),
+            ], 'Activity status updated successfully');
+
+        } catch (\Exception $e) {
+            return $this->messageResponse($e->getMessage(), 500);
+        }
+    }
 }
+
