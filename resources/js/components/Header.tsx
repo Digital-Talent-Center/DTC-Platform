@@ -35,6 +35,10 @@ export default function Header() {
     return pathname.startsWith(href);
   };
 
+  const getInitials = (name?: string) => {
+    return name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'AA';
+  };
+
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -94,8 +98,12 @@ export default function Header() {
                   Hi, <span className="font-medium">{user?.name || 'User'}!</span>
                 </span>
                 {/* Avatar */}
-                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white font-bold text-xs shadow-sm">
-                  {user?.name ? user.name.charAt(0) + user.name.split(' ')[1]?.charAt(0) : 'AA'}
+                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white font-bold text-xs shadow-sm overflow-hidden">
+                  {(user as any)?.profile_extension?.avatar_url ? (
+                    <img src={(user as any).profile_extension.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    getInitials(user?.name)
+                  )}
                 </div>
                 {/* Chevron */}
                 <svg xmlns="http://www.w3.org/2000/svg" className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -133,7 +141,7 @@ export default function Header() {
                   {/* Divider + Logout */}
                   <div className="border-t border-gray-100 py-1">
                     <Link
-                      href={route('logout')} method="post" as="button"
+                      href="/logout" method="post" as="button"
                       className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -183,10 +191,14 @@ export default function Header() {
             ))}
             <div className="mt-2 pt-2 border-t border-gray-100">
               <div className="flex items-center gap-3 px-3 py-2">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white font-bold text-xs">
-                  AA
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white font-bold text-xs overflow-hidden">
+                  {(user as any)?.profile_extension?.avatar_url ? (
+                    <img src={(user as any).profile_extension.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    getInitials(user?.name)
+                  )}
                 </div>
-                <span className="text-sm text-gray-700 font-medium">Arrijal Julfa Arrasyid</span>
+                <span className="text-sm text-gray-700 font-medium">{user?.name || 'User'}</span>
               </div>
               <Link
                 href="/profile"
@@ -199,7 +211,7 @@ export default function Header() {
                 My Profile
               </Link>
               <Link
-                href={route('logout')} method="post" as="button"
+                href="/logout" method="post" as="button"
                 className="flex items-center gap-3 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>

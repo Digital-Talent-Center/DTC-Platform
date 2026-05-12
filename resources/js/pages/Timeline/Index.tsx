@@ -41,6 +41,7 @@ function getBatchYear(nim?: string) {
 
 interface PostWithUI extends Post {
   showComments?: boolean;
+  liked?: boolean;
 }
 
 type ProfileWithStudyProgram = ProfileExtension & {
@@ -173,8 +174,8 @@ export default function TimelineIndex() {
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
               <div className="h-20 bg-gradient-to-r from-amber-400 to-amber-500" />
               <div className="px-5 pb-5 -mt-8 text-center">
-                <div className="w-16 h-16 mx-auto rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 border-4 border-white shadow-md flex items-center justify-center text-white text-lg font-bold">
-                  {getInitials(profile?.user?.name || 'AA')}
+                <div className="w-16 h-16 mx-auto rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 border-4 border-white shadow-md flex items-center justify-center text-white text-lg font-bold overflow-hidden">
+                  {profile?.avatarUrl ? <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" /> : getInitials(profile?.user?.name || 'AA')}
                 </div>
                 <h3 className="mt-3 text-base font-semibold text-gray-900">{profile?.user?.name || 'User'}</h3>
                 <p className="text-xs text-gray-400">Student</p>
@@ -220,8 +221,8 @@ export default function TimelineIndex() {
             {/* Create Post */}
             <div className="bg-white rounded-2xl border border-gray-100 p-5">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-xs font-bold">
-                  {getInitials(profile?.user?.name || 'AA')}
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-xs font-bold overflow-hidden">
+                  {profile?.avatarUrl ? <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" /> : getInitials(profile?.user?.name || 'AA')}
                 </div>
                 <input 
                   type="text" 
@@ -266,8 +267,8 @@ export default function TimelineIndex() {
                 <div className="p-5">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-xs font-bold">
-                        {getInitials(post.user?.name || 'AA')}
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-xs font-bold overflow-hidden">
+                        {post.user?.profileExtension?.avatarUrl ? <img src={post.user.profileExtension.avatarUrl} alt="Avatar" className="w-full h-full object-cover" /> : getInitials(post.user?.name || 'AA')}
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-gray-900">{post.user?.name || 'Anonymous'}</p>
@@ -341,8 +342,8 @@ export default function TimelineIndex() {
                     <div className="px-5 py-3 space-y-3 max-h-64 overflow-y-auto">
                       {post.comments.map((c) => (
                         <div key={c.id} className="flex items-start gap-2.5">
-                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0">
-                            {getInitials(c.user?.name || 'AA')}
+                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0 overflow-hidden">
+                            {c.user?.profileExtension?.avatarUrl ? <img src={c.user.profileExtension.avatarUrl} alt="Avatar" className="w-full h-full object-cover" /> : getInitials(c.user?.name || 'AA')}
                           </div>
                           <div className="bg-gray-50 rounded-xl px-3 py-2 flex-1 min-w-0">
                             <div className="flex items-center gap-2">
@@ -357,8 +358,8 @@ export default function TimelineIndex() {
 
                     {/* Comment Input */}
                     <div className="px-5 py-3 border-t border-gray-50 flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0">
-                        {getInitials(profile?.name || 'AA')}
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0 overflow-hidden">
+                        {profile?.avatarUrl ? <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" /> : getInitials(profile?.user?.name || 'AA')}
                       </div>
                       <div className="flex-1 flex items-center gap-2">
                         <input 
@@ -412,7 +413,7 @@ export default function TimelineIndex() {
                 </div>
               </div>
               <Link 
-                href={route('dashboard.activities')}
+                href="/dashboard/activities"
                 className="block w-full mt-4 py-2 text-center text-xs font-medium text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 View All Calendar

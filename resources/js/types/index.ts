@@ -37,6 +37,7 @@ export interface User {
     email_verified_at: string | null;
     created_at: string;
     updated_at: string;
+    profileExtension?: ProfileExtension;
     [key: string]: unknown; // This allows for additional properties...
 }
 
@@ -219,7 +220,9 @@ export interface ProfileExtension {
     profileCompletedAt?: string;
     createdAt: string;
     updatedAt: string;
+    user?: User;
 }
+
 
 /**
  * Pagination Interfaces

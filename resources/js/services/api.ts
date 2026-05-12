@@ -470,6 +470,38 @@ export const api = {
       return fetch(`${API_BASE}/profile/mark-complete`, buildFetchOptions('PUT'))
         .then(r => handleResponse<ApiResponse<ProfileExtension>>(r));
     },
+
+    /**
+     * Upload avatar
+     */
+    uploadAvatar: async (file: File): Promise<ApiResponse<{ avatarUrl: string }>> => {
+      const formData = new FormData();
+      formData.append('avatar', file);
+
+      const headers: Record<string, string> = {
+        'Accept': 'application/json',
+      };
+
+      const token = getCsrfToken();
+      if (token) {
+        headers['X-XSRF-TOKEN'] = token;
+      }
+
+      return fetch(`${API_BASE}/profile/avatar`, {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: formData,
+      }).then(r => handleResponse<ApiResponse<{ avatarUrl: string }>>(r));
+    },
+
+    /**
+     * Delete avatar
+     */
+    deleteAvatar: async (): Promise<ApiResponse<null>> => {
+      return fetch(`${API_BASE}/profile/avatar`, buildFetchOptions('DELETE'))
+        .then(r => handleResponse<ApiResponse<null>>(r));
+    },
   },
 };
 
