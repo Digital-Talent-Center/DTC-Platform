@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Achievement;
+use App\Models\Report;
 use Inertia\Inertia;
 
 class AdminDashboardController extends Controller
@@ -16,6 +17,9 @@ class AdminDashboardController extends Controller
         // Total Achievement Baru (Approved)
         $totalApprovedAchievements = Achievement::where('status', 'approved')->count();
 
+        // Total Laporan Aktif (pending + under_review)
+        $totalActiveReports = Report::whereIn('status', ['pending', 'under_review'])->count();
+
         // 5 Recent Users
         $usersData = User::with('profileExtension')
             ->where('role', '!=', 'admin')
@@ -25,10 +29,10 @@ class AdminDashboardController extends Controller
 
         $recentUsers = $usersData->map(function ($user) {
             return [
-                'id' => $user->id,
-                'name' => $user->name,
+                'id'    => $user->id,
+                'name'  => $user->name,
                 'major' => $user->profileExtension?->major ?? 'N/A',
-                'nim' => $user->profileExtension?->nim ?? 'N/A',
+                'nim'   => $user->profileExtension?->nim ?? 'N/A',
                 'status' => 'ACTIVE',
             ];
         });
@@ -42,18 +46,42 @@ class AdminDashboardController extends Controller
 
         $recentAchievements = $achievementsData->map(function ($achievement) {
             return [
-                'id' => $achievement->id,
+                'id'    => $achievement->id,
                 'title' => $achievement->title,
-                'by' => $achievement->user->name ?? 'Unknown',
-                'icon' => '🏆', // default icon
+                'by'    => $achievement->user->name ?? 'Unknown',
+                'icon'  => '🏆',
+            ];
+        });
+
+        // 3 Laporan terbaru (pending / under_review) untuk preview dashboard
+        $recentReportsData = Report::with('reporter')
+            ->whereIn('status', ['pending', 'under_review'])
+            ->latest()
+            ->take(3)
+            ->get();
+
+        $recentReports = $recentReportsData->map(function ($report) {
+            $initials = collect(explode(' ', $report->reporter->name ?? 'U K'))
+                ->map(fn($word) => strtoupper(substr($word, 0, 1)))
+                ->take(2)
+                ->join('');
+
+            return [
+                'id'      => $report->id,
+                'user'    => $report->reporter->name ?? 'Unknown',
+                'avatar'  => $initials,
+                'reason'  => strtoupper(str_replace('_', ' ', $report->reason)),
+                'content' => $report->description ?? 'Tidak ada deskripsi laporan.',
             ];
         });
 
         return Inertia::render('admin/dashboard', [
-            'totalStudents' => $totalStudents,
-            'totalApprovedAchievements' => $totalApprovedAchievements,
-            'recentUsers' => $recentUsers,
-            'recentAchievements' => $recentAchievements,
+            'totalStudents'            => $totalStudents,
+            'totalApprovedAchievements'=> $totalApprovedAchievements,
+            'totalActiveReports'       => $totalActiveReports,
+            'recentUsers'              => $recentUsers,
+            'recentAchievements'       => $recentAchievements,
+            'recentReports'            => $recentReports,
         ]);
     }
 }

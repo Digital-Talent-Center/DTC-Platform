@@ -1,13 +1,7 @@
 "use client";
 import { useState } from "react";
-import { Link, Head } from "@inertiajs/react";
+import { Link, Head, router } from "@inertiajs/react";
 import AppLayout from "@/layouts/app-layout";
-
-const reportedActivities = [
-    { id: 1, user: "Rahmat Hidayat", avatar: "RH", avatarColor: "from-slate-400 to-slate-600", reason: "DILAPORKAN", content: "Konten ini mengandung kata-kata yang tidak pantas dan...", sensitive: true },
-    { id: 2, user: "Agus", avatar: "AG", avatarColor: "from-slate-400 to-slate-600", reason: "DILAPORKAN", content: "Konten ini mengandung kata-kata yang tidak pantas dan...", sensitive: true },
-    { id: 3, user: "Ahmad", avatar: "AH", avatarColor: "from-slate-400 to-slate-600", reason: "DILAPORKAN", content: "Konten ini mengandung kata-kata yang tidak pantas dan...", sensitive: true },
-];
 
 interface UserData {
     id: number;
@@ -24,11 +18,21 @@ interface AchievementData {
     icon: string;
 }
 
+interface ReportData {
+    id: number;
+    user: string;
+    avatar: string;
+    reason: string;
+    content: string;
+}
+
 interface DashboardProps {
     totalStudents: number;
     totalApprovedAchievements: number;
+    totalActiveReports: number;
     recentUsers: UserData[];
     recentAchievements: AchievementData[];
+    recentReports: ReportData[];
 }
 
 /* ─── Sub-Components ─── */
@@ -54,11 +58,32 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 /* ─── Main Page ─── */
-export default function AdminDashboardPage({ totalStudents, totalApprovedAchievements, recentUsers, recentAchievements }: DashboardProps) {
+export default function AdminDashboardPage({ totalStudents, totalApprovedAchievements, totalActiveReports, recentUsers, recentAchievements, recentReports }: DashboardProps) {
     const [achievements, setAchievements] = useState<AchievementData[]>(recentAchievements || []);
+    const [reports, setReports] = useState<ReportData[]>(recentReports || []);
+    const [loadingAchievementId, setLoadingAchievementId] = useState<number | null>(null);
 
-    function handleApprove(id: number) { setAchievements((prev) => prev.filter((a) => a.id !== id)); }
-    function handleReject(id: number) { setAchievements((prev) => prev.filter((a) => a.id !== id)); }
+    function handleApprove(id: number) {
+        if (loadingAchievementId !== null) return;
+        setLoadingAchievementId(id);
+        router.patch(route('admin.achievements.updateStatus', id), { status: 'approved' }, {
+            preserveScroll: true,
+            onSuccess: () => setAchievements(prev => prev.filter(a => a.id !== id)),
+            onError: () => alert('Gagal menyetujui pencapaian.'),
+            onFinish: () => setLoadingAchievementId(null),
+        });
+    }
+
+    function handleReject(id: number) {
+        if (loadingAchievementId !== null) return;
+        setLoadingAchievementId(id);
+        router.patch(route('admin.achievements.updateStatus', id), { status: 'rejected' }, {
+            preserveScroll: true,
+            onSuccess: () => setAchievements(prev => prev.filter(a => a.id !== id)),
+            onError: () => alert('Gagal menolak pencapaian.'),
+            onFinish: () => setLoadingAchievementId(null),
+        });
+    }
 
     return (
         <AppLayout>
@@ -83,7 +108,7 @@ export default function AdminDashboardPage({ totalStudents, totalApprovedAchieve
                     />
                     <StatCard
                         icon={<svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>}
-                        label="Laporan Aktif" value="0" color="bg-red-50"
+                        label="Laporan Aktif" value={totalActiveReports?.toLocaleString() || "0"} color="bg-red-50"
                     />
                 </div>
 
@@ -145,37 +170,53 @@ export default function AdminDashboardPage({ totalStudents, totalApprovedAchieve
                 <section className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                     <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
                         <h2 className="text-lg font-bold text-gray-900">Manajemen Aktivitas</h2>
-                        <button className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 font-medium transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
-                            Refresh Feed
-                        </button>
+                        {reports.length > 0 && (
+                            <span className="w-6 h-6 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
+                                {reports.length}
+                            </span>
+                        )}
                     </div>
                     <div className="p-6">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {reportedActivities.map((activity) => (
-                                <div key={activity.id} className="border border-gray-100 rounded-xl p-4 flex flex-col gap-3 hover:shadow-md transition-shadow">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${activity.avatarColor} flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>{activity.avatar}</div>
-                                        <div>
-                                            <p className="text-sm font-semibold text-gray-800">{activity.user}</p>
-                                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-500 uppercase">
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>
-                                                {activity.reason}
-                                            </span>
+                        {reports.length === 0 ? (
+                            <div className="text-center py-12 text-gray-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 mx-auto mb-3 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <p className="text-sm font-medium">Tidak ada laporan aktivitas yang aktif</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {reports.map((report) => (
+                                    <div key={report.id} className="border border-gray-100 rounded-xl p-4 flex flex-col gap-3 hover:shadow-md transition-shadow">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                                                {report.avatar}
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-800">{report.user}</p>
+                                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-500 uppercase">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>
+                                                    {report.reason}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <p className="text-xs text-gray-500 leading-relaxed flex-1 line-clamp-3">{report.content}</p>
+                                        <div className="flex items-center justify-between pt-2 border-t border-gray-50">
+                                            <span className="inline-flex items-center gap-1 bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full">SENSITIF</span>
+                                            <button
+                                                onClick={() => {
+                                                    router.delete(route('admin.reports.destroy', report.id), {
+                                                        preserveScroll: true,
+                                                        onSuccess: () => setReports(prev => prev.filter(r => r.id !== report.id)),
+                                                    });
+                                                }}
+                                                className="ml-auto p-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors" title="Hapus"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                                            </button>
                                         </div>
                                     </div>
-                                    <p className="text-xs text-gray-500 leading-relaxed flex-1 line-clamp-3">{activity.content}</p>
-                                    <div className="flex items-center justify-between pt-2 border-t border-gray-50">
-                                        {activity.sensitive && (
-                                            <span className="inline-flex items-center gap-1 bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full">SENSITIF</span>
-                                        )}
-                                        <button className="ml-auto p-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors" title="Hapus">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                                ))}
+                            </div>
+                        )}
                         <div className="mt-5 flex justify-center">
                             <Link href="/admin/activities" className="text-sm text-gray-500 hover:text-amber-600 font-medium flex items-center gap-1.5 transition-colors">
                                 Lihat Semua Laporan
@@ -211,8 +252,24 @@ export default function AdminDashboardPage({ totalStudents, totalApprovedAchieve
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2 flex-shrink-0">
-                                            <button onClick={() => handleApprove(achievement.id)} className="px-4 py-1.5 bg-gray-900 hover:bg-gray-700 text-white text-xs font-semibold rounded-lg transition-colors">Setujui</button>
-                                            <button onClick={() => handleReject(achievement.id)} className="px-4 py-1.5 bg-white hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded-lg border border-gray-200 transition-colors">Tolak</button>
+                                            <button
+                                                onClick={() => handleApprove(achievement.id)}
+                                                disabled={loadingAchievementId !== null}
+                                                className="px-4 py-1.5 bg-gray-900 hover:bg-gray-700 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                                            >
+                                                {loadingAchievementId === achievement.id
+                                                    ? <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                                    : 'Setujui'}
+                                            </button>
+                                            <button
+                                                onClick={() => handleReject(achievement.id)}
+                                                disabled={loadingAchievementId !== null}
+                                                className="px-4 py-1.5 bg-white hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded-lg border border-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                                            >
+                                                {loadingAchievementId === achievement.id
+                                                    ? <span className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                                                    : 'Tolak'}
+                                            </button>
                                         </div>
                                     </div>
                                 ))}

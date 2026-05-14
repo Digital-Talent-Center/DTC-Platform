@@ -7,6 +7,7 @@ use App\Models\Post;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Inertia\Inertia;
 
 class ReportController extends Controller
 {
@@ -231,6 +232,58 @@ class ReportController extends Controller
             return $this->apiResponse($report, 'Report status updated successfully');
         } catch (\Exception $e) {
             return $this->messageResponse($e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Render halaman Manajemen Aktivitas (admin) dengan data laporan dari DB
+     */
+    public function adminActivityManagement(Request $request)
+    {
+        $query = Report::query()
+            ->with(['post', 'reporter']);
+
+        // Filter status jika ada
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        } else {
+            // Default: tampilkan yang pending & under_review
+            $query->whereIn('status', ['pending', 'under_review']);
+        }
+
+        $reportsData = $query->latest('created_at')->paginate(24);
+
+        $reports = $reportsData->through(function ($report) {
+            return [
+                'id'          => $report->id,
+                'user'        => $report->reporter->name ?? 'Unknown',
+                'avatarUrl'   => 'https://i.pravatar.cc/150?u=' . ($report->reporter->id ?? $report->id),
+                'reason'      => strtoupper(str_replace('_', ' ', $report->reason)),
+                'content'     => $report->description ?? ($report->post->content ?? 'Tidak ada deskripsi.'),
+                'status'      => $report->status,
+                'post_id'     => $report->post_id,
+                'created_at'  => $report->created_at->toISOString(),
+            ];
+        });
+
+        $pendingCount = Report::whereIn('status', ['pending', 'under_review'])->count();
+
+        return Inertia::render('admin/Activity-Management', [
+            'initialReports'  => $reports,
+            'pendingCount'    => $pendingCount,
+        ]);
+    }
+
+    /**
+     * Delete a report (admin only)
+     */
+    public function destroy(Report $report)
+    {
+        try {
+            $report->delete();
+            return back()->with('success', 'Laporan berhasil dihapus.');
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => $e->getMessage()]);
         }
     }
 

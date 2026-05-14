@@ -127,6 +127,23 @@ class AchievementController extends Controller
     }
 
     /**
+     * Update achievement status (admin only) — approve or reject
+     */
+    public function updateStatus(Request $request, Achievement $achievement)
+    {
+        $validated = $request->validate([
+            'status' => 'required|in:approved,rejected',
+        ]);
+
+        try {
+            $achievement->update(['status' => $validated['status']]);
+            return back()->with('success', 'Status pencapaian berhasil diperbarui.');
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
      * Get all pending achievements for Admin Dashboard
      */
     public function adminIndex()

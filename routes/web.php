@@ -5,6 +5,7 @@ use Inertia\Inertia;
 use App\Http\Controllers\AchievementController;
 use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\UsersController;
 use App\Http\Middleware\IsAdmin;
 
@@ -66,11 +67,11 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware([IsAdmin::class])->group(function () {
         Route::get('/admin/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
 
-        Route::get('/admin/activities', function () {
-            return Inertia::render('admin/Activity-Management');
-        })->name('admin.activities');
+        Route::get('/admin/activities', [ReportController::class, 'adminActivityManagement'])->name('admin.activities');
+        Route::delete('/admin/reports/{report}', [ReportController::class, 'destroy'])->name('admin.reports.destroy');
 
         Route::get('/admin/achievements', [AchievementController::class, 'adminIndex'])->name('admin.achievements');
+        Route::patch('/admin/achievements/{achievement}/status', [AchievementController::class, 'updateStatus'])->name('admin.achievements.updateStatus');
 
         Route::get('/admin/students', [UsersController::class, 'index'])->name('admin.students');
     });

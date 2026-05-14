@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 
 interface AchievementData {
     id: number;
@@ -22,17 +22,35 @@ export default function AchievementManagement({ initialAchievements, initialPend
     const [achievements, setAchievements] = useState<AchievementData[]>(initialAchievements || []);
     const [approvedCount, setApprovedCount] = useState(initialApprovedCount || 0);
     const [pendingCount, setPendingCount] = useState(initialPendingCount || 0);
-    const [hasMore, setHasMore] = useState(false); // Can be driven by pagination later
+    const [loadingId, setLoadingId] = useState<number | null>(null);
 
     const handleApprove = (id: number) => {
-        setAchievements(prev => prev.filter(a => a.id !== id));
-        setApprovedCount(prev => prev + 1);
-        setPendingCount(prev => Math.max(0, prev - 1));
+        if (loadingId !== null) return;
+        setLoadingId(id);
+        router.patch(route('admin.achievements.updateStatus', id), { status: 'approved' }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setAchievements(prev => prev.filter(a => a.id !== id));
+                setApprovedCount(prev => prev + 1);
+                setPendingCount(prev => Math.max(0, prev - 1));
+            },
+            onError: () => alert('Gagal menyetujui pencapaian. Silakan coba lagi.'),
+            onFinish: () => setLoadingId(null),
+        });
     };
 
     const handleReject = (id: number) => {
-        setAchievements(prev => prev.filter(a => a.id !== id));
-        setPendingCount(prev => Math.max(0, prev - 1));
+        if (loadingId !== null) return;
+        setLoadingId(id);
+        router.patch(route('admin.achievements.updateStatus', id), { status: 'rejected' }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setAchievements(prev => prev.filter(a => a.id !== id));
+                setPendingCount(prev => Math.max(0, prev - 1));
+            },
+            onError: () => alert('Gagal menolak pencapaian. Silakan coba lagi.'),
+            onFinish: () => setLoadingId(null),
+        });
     };
 
     return (
@@ -94,15 +112,21 @@ export default function AchievementManagement({ initialAchievements, initialPend
                             <div className="grid grid-cols-2 gap-4">
                                 <button
                                     onClick={() => handleReject(achievement.id)}
-                                    className="py-3 px-4 rounded-full border-[1.5px] border-red-200 text-red-600 font-bold text-sm tracking-wide hover:bg-red-50 hover:border-red-300 transition-colors cursor-pointer"
+                                    disabled={loadingId !== null}
+                                    className="py-3 px-4 rounded-full border-[1.5px] border-red-200 text-red-600 font-bold text-sm tracking-wide hover:bg-red-50 hover:border-red-300 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                 >
-                                    Reject
+                                    {loadingId === achievement.id ? (
+                                        <span className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                                    ) : 'Reject'}
                                 </button>
                                 <button
                                     onClick={() => handleApprove(achievement.id)}
-                                    className="py-3 px-4 rounded-full bg-[#f6931c] text-white font-bold text-sm tracking-wide hover:bg-[#e08418] transition-colors shadow-sm cursor-pointer"
+                                    disabled={loadingId !== null}
+                                    className="py-3 px-4 rounded-full bg-[#f6931c] text-white font-bold text-sm tracking-wide hover:bg-[#e08418] transition-colors shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                 >
-                                    Approve
+                                    {loadingId === achievement.id ? (
+                                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    ) : 'Approve'}
                                 </button>
                             </div>
                         </div>

@@ -1,38 +1,64 @@
 "use client";
 
 import { useState } from "react";
-import { Head } from "@inertiajs/react";
+import { Head, router } from "@inertiajs/react";
 import AppLayout from "@/layouts/app-layout";
 import { Trash2, Info, ChevronDown, ClipboardList } from "lucide-react";
 
-// Dummy Data Generation
-const generateDummyReports = (count: number) => {
-    const names = ["Rahmat Hidayat", "Agus", "Ahmad", "Siti", "Budi", "Larasati", "Dian", "Eko", "Putri", "Rizky"];
-    return Array.from({ length: count }).map((_, i) => ({
-        id: i + 1,
-        user: names[i % names.length],
-        // Use pravatar for a photo-like avatar to match design
-        avatarUrl: `https://i.pravatar.cc/150?u=${i + 100}`,
-        reason: "DILAPORKAN",
-        content: "Konten ini mengandung kata-kata yang tidak pantas dan menyalahi aturan komunitas yang telah ditetapkan. Mohon segera ditindaklanjuti.",
-    }));
-};
+// ── Tipe data laporan dari database ──────────────────────────────────────────
+interface ReportItem {
+    id: number;
+    user: string;
+    avatarUrl: string;
+    reason: string;
+    content: string;
+    status: string;
+    post_id: number | null;
+    created_at: string;
+}
 
-const initialReports = generateDummyReports(24);
+interface PaginatedReports {
+    data: ReportItem[];
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+}
 
-export default function ReportListPage() {
-    const [reports, setReports] = useState(initialReports);
+interface Props {
+    initialReports: PaginatedReports;
+    pendingCount: number;
+}
+
+// ── Komponen utama ─────────────────────────────────────────────────────────────
+export default function ReportListPage({ initialReports, pendingCount }: Props) {
+    const [reports, setReports] = useState<ReportItem[]>(initialReports?.data ?? []);
     const [visibleCount, setVisibleCount] = useState(6);
+    const [deleting, setDeleting] = useState<number | null>(null);
 
-    const pendingCount = reports.length;
-
+    // ── Hapus laporan via Inertia (DELETE ke server) ──────────────────────────
     const handleDelete = (id: number) => {
-        setReports(prev => prev.filter(report => report.id !== id));
+        if (deleting !== null) return; // cegah double-klik
+        setDeleting(id);
+
+        router.delete(route("admin.reports.destroy", id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                // Hapus dari state lokal supaya UI langsung update
+                setReports((prev) => prev.filter((r) => r.id !== id));
+            },
+            onError: () => {
+                alert("Gagal menghapus laporan. Silakan coba lagi.");
+            },
+            onFinish: () => setDeleting(null),
+        });
     };
 
     const handleLoadMore = () => {
-        setVisibleCount(prev => prev + 6);
+        setVisibleCount((prev) => prev + 6);
     };
+
+    const visibleReports = reports.slice(0, visibleCount);
 
     return (
         <AppLayout>
@@ -57,19 +83,27 @@ export default function ReportListPage() {
                 ) : (
                     <>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {reports.slice(0, visibleCount).map((report) => (
-                                <div key={report.id} className="bg-[#F8F9FA] p-8 rounded-sm flex flex-col h-full relative group">
-
+                            {visibleReports.map((report) => (
+                                <div
+                                    key={report.id}
+                                    className="bg-[#F8F9FA] p-8 rounded-sm flex flex-col h-full relative group"
+                                >
                                     {/* Card Header: Avatar & Name */}
                                     <div className="flex items-start gap-4 mb-6">
                                         <div className="w-11 h-11 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
-                                            <img src={report.avatarUrl} alt={report.user} className="w-full h-full object-cover grayscale" />
+                                            <img
+                                                src={report.avatarUrl}
+                                                alt={report.user}
+                                                className="w-full h-full object-cover grayscale"
+                                            />
                                         </div>
                                         <div>
                                             <h3 className="font-bold text-gray-900 text-[15px]">{report.user}</h3>
                                             <div className="flex items-center gap-1 mt-0.5 text-[#C23B22]">
                                                 <Info className="w-3.5 h-3.5" />
-                                                <span className="text-[10px] font-bold uppercase tracking-wider">{report.reason}</span>
+                                                <span className="text-[10px] font-bold uppercase tracking-wider">
+                                                    {report.reason}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -83,10 +117,15 @@ export default function ReportListPage() {
                                     <div className="flex justify-end mt-auto">
                                         <button
                                             onClick={() => handleDelete(report.id)}
-                                            className="w-10 h-10 rounded-full bg-[#C23B22] text-white flex items-center justify-center hover:bg-red-800 transition-colors shadow-sm cursor-pointer"
+                                            disabled={deleting === report.id}
+                                            className="w-10 h-10 rounded-full bg-[#C23B22] text-white flex items-center justify-center hover:bg-red-800 transition-colors shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                             title="Hapus Laporan"
                                         >
-                                            <Trash2 className="w-[18px] h-[18px]" />
+                                            {deleting === report.id ? (
+                                                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                            ) : (
+                                                <Trash2 className="w-[18px] h-[18px]" />
+                                            )}
                                         </button>
                                     </div>
                                 </div>
