@@ -10,6 +10,7 @@ use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\ProfileExtensionController;
 use App\Http\Controllers\GuideController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\MidtransController;
 
 // All API routes require authentication via session (shared web middleware)
 Route::middleware('auth')->group(function () {
@@ -109,4 +110,13 @@ Route::middleware('auth')->group(function () {
         Route::delete('{guide}', [GuideController::class, 'destroy']);
         Route::post('{guide}/download', [GuideController::class, 'download']);
     });
+
+    // Midtrans Routes — create transaction (auth required)
+    Route::prefix('midtrans')->group(function () {
+        Route::post('create-transaction', [MidtransController::class, 'createTransaction']);
+    });
 });
+
+// Midtrans Webhook — public, no auth, no CSRF (Midtrans server yang memanggil)
+Route::post('/midtrans/notification', [MidtransController::class, 'handleNotification'])
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);

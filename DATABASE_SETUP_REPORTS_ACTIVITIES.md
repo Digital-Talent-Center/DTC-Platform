@@ -1,7 +1,7 @@
 # Database Implementation: Reported Posts & Activity Management
 
 ## Overview
-Saya telah membuat database schema untuk:
+Berikut adalah database schema untuk:
 1. **Reports Table** - Menyimpan laporan/report postingan
 2. **Enhanced Activity Management** - Menambah fitur management untuk activities
 

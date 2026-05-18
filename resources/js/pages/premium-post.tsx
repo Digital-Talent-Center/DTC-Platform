@@ -1,6 +1,7 @@
-import { useState, useRef, ChangeEvent, FormEvent, DragEvent } from 'react';
-import { Head } from '@inertiajs/react';
+import { useState, useRef, useEffect, ChangeEvent, FormEvent, DragEvent } from 'react';
+import { Head, usePage } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
+import type { SharedData } from '@/types';
 
 type Duration = '7-hari' | '1-bulan' | '3-bulan';
 type PaymentMethod = 'virtual-account' | 'e-wallet' | 'kartu-kredit';
@@ -49,16 +50,53 @@ const formatRupiah = (n: number) => `Rp ${n.toLocaleString('id-ID')}`;
 
 const TAX_RATE = 0.11;
 
+// Type declaration untuk Midtrans Snap global yang diload dari CDN
+declare global {
+  interface Window {
+    snap?: {
+      pay: (
+        token: string,
+        options: {
+          onSuccess: (result: Record<string, unknown>) => void;
+          onPending: (result: Record<string, unknown>) => void;
+          onError:   (result: Record<string, unknown>) => void;
+          onClose:   () => void;
+        }
+      ) => void;
+    };
+  }
+}
+
 export default function PremiumPostPage() {
-  const [judul, setJudul] = useState('');
-  const [deskripsi, setDeskripsi] = useState('');
-  const [file, setFile] = useState<File | null>(null);
+  const { auth } = usePage<SharedData>().props;
+
+  const [judul, setJudul]           = useState('');
+  const [deskripsi, setDeskripsi]   = useState('');
+  const [file, setFile]             = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
-  const [duration, setDuration] = useState<Duration>('1-bulan');
-  const [payment, setPayment] = useState<PaymentMethod>('e-wallet');
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [duration, setDuration]     = useState<Duration>('1-bulan');
+  const [payment, setPayment]       = useState<PaymentMethod>('e-wallet');
+  const [errors, setErrors]         = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<'idle' | 'success' | 'pending' | 'error'>('idle');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const snapUrl = import.meta.env.VITE_MIDTRANS_SNAP_URL as string;
+
+  // Inject Midtrans Snap.js script sekali saja
+  useEffect(() => {
+    if (!snapUrl || document.getElementById('midtrans-snap-script')) return;
+
+    const script = document.createElement('script');
+    script.id  = 'midtrans-snap-script';
+    script.src = snapUrl;
+    script.setAttribute('data-client-key', import.meta.env.VITE_MIDTRANS_CLIENT_KEY ?? '');
+    document.head.appendChild(script);
+
+    return () => {
+      // Tidak dihapus agar tidak reload antar navigasi
+    };
+  }, [snapUrl]);
 
   const selectedDuration =
     durationOptions.find((d) => d.id === duration) ?? durationOptions[1];
@@ -87,19 +125,81 @@ export default function PremiumPostPage() {
     handleFile(dropped);
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  /**
+   * Ambil CSRF token dari cookie (sesuai helper yang ada di api.ts)
+   */
+  const getCsrfToken = (): string => {
+    const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : '';
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+
+    // Validasi form
     const next: Record<string, string> = {};
-    if (!judul.trim()) next.judul = 'Judul wajib diisi';
+    if (!judul.trim())     next.judul     = 'Judul wajib diisi';
     if (!deskripsi.trim()) next.deskripsi = 'Deskripsi wajib diisi';
     setErrors((prev) => ({ ...prev, ...next }));
     if (Object.values(next).some(Boolean)) return;
 
     setSubmitting(true);
-    setTimeout(() => {
+    setPaymentStatus('idle');
+
+    try {
+      // 1. Request Snap token ke backend
+      const csrfToken = getCsrfToken();
+      const response  = await fetch('/api/midtrans/create-transaction', {
+        method:  'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Accept':        'application/json',
+          'X-XSRF-TOKEN':  csrfToken,
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          duration:   duration,
+          post_title: judul,
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.message || 'Gagal membuat transaksi');
+      }
+
+      const data: { snap_token: string; order_id: string; amount: number } = await response.json();
+
+      // 2. Buka Midtrans Snap popup
+      if (!window.snap) {
+        throw new Error('Midtrans Snap belum siap. Silakan refresh halaman.');
+      }
+
+      setSubmitting(false); // Popup sudah terbuka, hapus loading di tombol
+
+      window.snap.pay(data.snap_token, {
+        onSuccess: (_result) => {
+          setPaymentStatus('success');
+        },
+        onPending: (_result) => {
+          setPaymentStatus('pending');
+        },
+        onError: (_result) => {
+          setPaymentStatus('error');
+        },
+        onClose: () => {
+          // User menutup popup tanpa bayar — biarkan apa adanya
+          if (paymentStatus === 'idle') {
+            setSubmitting(false);
+          }
+        },
+      });
+
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Terjadi kesalahan';
+      setErrors((prev) => ({ ...prev, submit: message }));
       setSubmitting(false);
-      alert(`Pembayaran ${formatRupiah(total)} via ${payment} berhasil diproses!`);
-    }, 800);
+    }
   };
 
   return (
@@ -337,12 +437,34 @@ export default function PremiumPostPage() {
                   })}
                 </div>
 
+                {/* Alert status pembayaran */}
+                {paymentStatus === 'success' && (
+                  <div className="mb-4 p-3 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm font-medium">
+                    ✅ Pembayaran berhasil! Post Anda sedang diproses.
+                  </div>
+                )}
+                {paymentStatus === 'pending' && (
+                  <div className="mb-4 p-3 rounded-lg bg-yellow-50 border border-yellow-200 text-yellow-700 text-sm font-medium">
+                    ⏳ Pembayaran pending. Selesaikan pembayaran Anda.
+                  </div>
+                )}
+                {paymentStatus === 'error' && (
+                  <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm font-medium">
+                    ❌ Pembayaran gagal. Silakan coba lagi.
+                  </div>
+                )}
+                {errors.submit && (
+                  <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
+                    {errors.submit}
+                  </div>
+                )}
+
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || paymentStatus === 'success'}
                   className="w-full py-3 text-sm font-semibold text-white bg-amber-700 hover:bg-amber-800 disabled:bg-amber-300 disabled:cursor-not-allowed rounded-full shadow-sm transition-colors"
                 >
-                  {submitting ? 'Memproses...' : 'Bayar Sekarang'}
+                  {submitting ? 'Memproses...' : paymentStatus === 'success' ? 'Pembayaran Selesai ✓' : 'Bayar Sekarang'}
                 </button>
 
                 <p className="text-[10px] text-gray-400 text-center tracking-wider uppercase mt-4 leading-relaxed">
