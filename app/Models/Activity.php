@@ -24,8 +24,6 @@ class Activity extends Model
     protected $casts = [
         'activity_date' => 'date',
         'deadline' => 'date',
-        'start_time' => 'datetime:H:i:s',
-        'end_time' => 'datetime:H:i:s',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

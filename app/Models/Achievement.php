@@ -10,15 +10,27 @@ class Achievement extends Model
 
     protected $fillable = [
         'user_id',
+        'nim',
+        'nama_lengkap',
+        'tahun_ajaran',
+        'tanggal_mulai',
+        'tanggal_selesai',
         'title',
         'description',
         'category',
+        'jenis',
+        'tingkat',
+        'keikutsertaan',
         'status',
         'badge_icon',
         'year',
+        'link_sertifikat',
+        'bukti_path',
     ];
 
     protected $casts = [
+        'tanggal_mulai' => 'date',
+        'tanggal_selesai' => 'date',
         'year' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',

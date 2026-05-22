@@ -248,8 +248,8 @@ function PremiumPostsSection() {
               </svg>
             </div>
             <div>
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Recent Posts</h2>
-              <p className="text-xs text-gray-400 mt-0.5">Latest from your community</p>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Premium Highlights</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Premium Highlights Post</p>
             </div>
           </div>
 

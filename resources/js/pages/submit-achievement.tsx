@@ -37,7 +37,6 @@ const initialForm: FormState = {
   setuju: false,
 };
 
-// ─── Reusable Field Wrapper ────────────────────────────────
 function Field({
   label,
   children,
@@ -57,7 +56,6 @@ function Field({
   );
 }
 
-// ─── Section Divider ───────────────────────────────────────
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-3 mt-2">
@@ -133,23 +131,86 @@ export default function SubmitAchievementPage() {
     return Object.keys(next).length === 0;
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
     setSubmitting(true);
-    // Simulasi submit — integrasi backend bisa ditambahkan kemudian
-    setTimeout(() => {
-      setSubmitting(false);
-      alert('Prestasi berhasil dikirim!');
+    
+    try {
+      // Create FormData for multipart/form-data (file upload)
+      const formData = new FormData();
+      
+      // Add all form fields
+      formData.append('nim', form.nim);
+      formData.append('nama_lengkap', form.namaLengkap);
+      formData.append('tahun_ajaran', form.tahunAjaran);
+      formData.append('tanggal_mulai', form.tanggalMulai);
+      formData.append('tanggal_selesai', form.tanggalSelesai);
+      formData.append('title', form.jenis); // Jenis as title
+      formData.append('description', form.deskripsi);
+      formData.append('category', form.kategori);
+      formData.append('jenis', form.jenis);
+      formData.append('tingkat', form.tingkat);
+      formData.append('keikutsertaan', form.keikutsertaan);
+      formData.append('link_sertifikat', form.linkSertifikat);
+      
+      // Add file if present
+      if (file) {
+        formData.append('bukti', file);
+      }
+      
+      const response = await fetch('/api/achievements', {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': document
+            .querySelector('meta[name="csrf-token"]')
+            ?.getAttribute('content') || '',
+        },
+        credentials: 'include',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        let errorMessage = 'Gagal mengirim prestasi';
+        try {
+          const contentType = response.headers.get('content-type');
+          if (contentType?.includes('application/json')) {
+            const errorData = await response.json();
+            if (errorData.errors) {
+              // Laravel validation errors
+              const errorList = Object.values(errorData.errors).flat().join(', ');
+              errorMessage = errorList || errorData.message || errorMessage;
+            } else {
+              errorMessage = errorData.message || errorMessage;
+            }
+          }
+        } catch (parseError) {
+          errorMessage = `Server error: ${response.status}`;
+        }
+        throw new Error(errorMessage);
+      }
+      
+      const data = await response.json();
+      alert('Prestasi berhasil dikirim! Status: Pending untuk diverifikasi.');
       setForm(initialForm);
       setFile(null);
       setPreview(null);
-    }, 800);
+      setErrors({});
+    } catch (err: any) {
+      setErrors({ submit: err.message || 'Terjadi kesalahan saat mengirim prestasi' });
+      console.error('Submit error:', err);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleSaveDraft = () => {
-    console.log('Draft tersimpan', { ...form, file });
-    alert('Draft tersimpan secara lokal.');
+    const draft = { ...form, file };
+    localStorage.setItem('achievementDraft', JSON.stringify({
+      ...form,
+      fileName: file?.name,
+    }));
+    alert('Draft tersimpan secara lokal. Anda bisa melanjutkannya nanti.');
   };
 
   return (
@@ -180,6 +241,13 @@ export default function SubmitAchievementPage() {
           onSubmit={handleSubmit}
           className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 sm:p-8 space-y-6"
         >
+          {/* Error Message */}
+          {errors.submit && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+              <p className="font-medium">Error:</p>
+              <p>{errors.submit}</p>
+            </div>
+          )}
           {/* Identitas */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <Field label="NIM">

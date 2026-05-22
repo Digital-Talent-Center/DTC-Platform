@@ -44,20 +44,89 @@ class AchievementController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255|min:1',
-            'description' => 'nullable|string|max:1000',
-            'category' => 'required|string|max:100|min:1',
-            'year' => 'nullable|integer|min:1900|max:' . now()->year,
-            'badge_icon' => 'nullable|string|max:255',
-        ]);
+        try {
+            $validated = $request->validate([
+                // Student information
+                'nim' => 'required|string|max:20|min:1',
+                'nama_lengkap' => 'required|string|max:255|min:1',
+                
+                // Academic info
+                'tahun_ajaran' => 'required|string|max:20|min:1',
+                'tanggal_mulai' => 'required|date_format:Y-m-d',
+                'tanggal_selesai' => 'required|date_format:Y-m-d|after_or_equal:tanggal_mulai',
+                
+                // Achievement details
+                'title' => 'required|string|max:255|min:1',
+                'description' => 'required|string|max:2000|min:1',
+                'category' => 'required|string|max:100|min:1',
+                'jenis' => 'required|string|max:255|min:1',
+                'tingkat' => 'required|in:Internal Kampus,Lokal,Regional,Nasional,Internasional',
+                'keikutsertaan' => 'required|in:Individu,Tim/Kelompok',
+                
+                // Links and files
+                'link_sertifikat' => 'nullable|url|max:500',
+                'bukti' => 'nullable|file|mimes:pdf,jpg,jpeg,png,gif|max:2048',
+            ], [
+                'tanggal_mulai.required' => 'Tanggal mulai wajib diisi',
+                'tanggal_mulai.date_format' => 'Format tanggal mulai tidak valid',
+                'tanggal_selesai.required' => 'Tanggal selesai wajib diisi',
+                'tanggal_selesai.date_format' => 'Format tanggal selesai tidak valid',
+                'tanggal_selesai.after_or_equal' => 'Tanggal selesai harus sama atau setelah tanggal mulai',
+                'bukti.file' => 'Bukti harus berupa file',
+                'bukti.mimes' => 'Bukti harus berupa PDF atau Gambar (JPG, PNG, GIF)',
+                'bukti.max' => 'Ukuran bukti maksimal 2MB',
+            ]);
 
-        $achievement = Achievement::create([
-            'user_id' => Auth::id(),
-            ...$validated,
-        ]);
+            // Handle file upload
+            $buktiPath = null;
+            if ($request->hasFile('bukti')) {
+                try {
+                    $file = $request->file('bukti');
+                    $fileName = 'achievement_' . Auth::id() . '_' . time() . '.' . $file->getClientOriginalExtension();
+                    $buktiPath = $file->storeAs('achievements', $fileName, 'public');
+                    if (!$buktiPath) {
+                        throw new \Exception('Gagal menyimpan file bukti');
+                    }
+                } catch (\Exception $e) {
+                    return response()->json([
+                        'message' => 'Gagal mengunggah file: ' . $e->getMessage(),
+                    ], 400);
+                }
+            }
 
-        return $this->apiResponse($achievement, 'Achievement created successfully', 201);
+            $achievement = Achievement::create([
+                'user_id' => Auth::id(),
+                'nim' => $validated['nim'],
+                'nama_lengkap' => $validated['nama_lengkap'],
+                'tahun_ajaran' => $validated['tahun_ajaran'],
+                'tanggal_mulai' => $validated['tanggal_mulai'],
+                'tanggal_selesai' => $validated['tanggal_selesai'],
+                'title' => $validated['title'],
+                'description' => $validated['description'],
+                'category' => $validated['category'],
+                'jenis' => $validated['jenis'],
+                'tingkat' => $validated['tingkat'],
+                'keikutsertaan' => $validated['keikutsertaan'],
+                'link_sertifikat' => $validated['link_sertifikat'] ?? null,
+                'bukti_path' => $buktiPath,
+                'status' => 'pending',
+            ]);
+
+            return response()->json([
+                'message' => 'Achievement submitted successfully',
+                'data' => $achievement,
+            ], 201);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to submit achievement',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**

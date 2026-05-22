@@ -1,54 +1,27 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, Head } from '@inertiajs/react';
 import AppLayout from "@/layouts/app-layout";
 
 const tabs = ['Achievement Collection', 'Need Approval', 'Rejected'];
 
-const achievements = [
-  {
-    id: 1,
-    title: 'Juara 1 Hackathon Nasional',
-    description: 'Ini Contoh Prestasi',
-    category: 'HIGH PRIORITY',
-    categoryColor: 'bg-amber-100 text-amber-700',
-    link: 'apps.helloprodigi.web.id',
-    date: '30 Nov 2025',
-    iconBg: 'bg-amber-50',
-    iconColor: 'text-amber-600',
-    iconPath: 'M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z',
-    avatars: ['AA', 'BB'],
-    status: 'approved',
-  },
-  {
-    id: 2,
-    title: 'Social Media Strategy Q4',
-    description: 'Finalize the content calendar for DTC holiday campaign across all channels.',
-    category: 'MARKETING',
-    categoryColor: 'bg-green-100 text-green-700',
-    link: 'dtc-internal.docs.com/strategy',
-    date: '15 Dec 2025',
-    iconBg: 'bg-green-50',
-    iconColor: 'text-green-600',
-    iconPath: 'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z',
-    avatars: ['CC'],
-    extraAvatars: 3,
-    status: 'pending',
-  },
-  {
-    id: 3,
-    title: 'API Documentation Refactor',
-    description: 'Update swagger endpoints for the new microservices architecture version 2.4.',
-    category: 'ENGINEERING',
-    categoryColor: 'bg-blue-100 text-blue-700',
-    link: 'github.com/dtc-tech/core-api',
-    date: '05 Jan 2026',
-    iconBg: 'bg-gray-100',
-    iconColor: 'text-gray-600',
-    iconPath: 'M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5',
-    avatars: ['DD'],
-    status: 'rejected',
-  },
-];
+interface Achievement {
+  id: number;
+  nim: string;
+  nama_lengkap: string;
+  title: string;
+  description: string;
+  category: string;
+  jenis: string;
+  tingkat: string;
+  keikutsertaan: string;
+  tanggal_mulai: string;
+  tanggal_selesai: string;
+  link_sertifikat?: string;
+  bukti_path?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  updated_at: string;
+}
 
 const featuredAchievement = {
   id: 4,
@@ -63,6 +36,34 @@ const featuredAchievement = {
 
 export default function AchievementsPage() {
   const [activeTab, setActiveTab] = useState('Achievement Collection');
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  // Fetch achievements from API
+  useEffect(() => {
+    const fetchAchievements = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/achievements');
+        if (!response.ok) throw new Error('Failed to fetch achievements');
+        const data = await response.json();
+        
+        // Handle paginated response
+        const list = data.data?.data || data.data || [];
+        setAchievements(Array.isArray(list) ? list : []);
+        setError('');
+      } catch (err: any) {
+        console.error('Error fetching achievements:', err);
+        setError(err.message);
+        setAchievements([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAchievements();
+  }, []);
 
   const filteredAchievements = achievements.filter(item => {
     if (activeTab === 'Achievement Collection') return item.status === 'approved';
@@ -70,6 +71,28 @@ export default function AchievementsPage() {
     if (activeTab === 'Rejected') return item.status === 'rejected';
     return false;
   });
+
+  const getStatusStyles = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return { categoryColor: 'bg-green-100 text-green-700', label: 'Approved' };
+      case 'pending':
+        return { categoryColor: 'bg-yellow-100 text-yellow-700', label: 'Pending' };
+      case 'rejected':
+        return { categoryColor: 'bg-red-100 text-red-700', label: 'Rejected' };
+      default:
+        return { categoryColor: 'bg-gray-100 text-gray-700', label: status };
+    }
+  };
+
+  const getAchievementIcon = (tingkat: string) => {
+    const icons: { [key: string]: string } = {
+      'Internasional': 'M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z',
+      'Nasional': 'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z',
+      'Regional': 'M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5',
+    };
+    return icons[tingkat] || icons['Internasional'];
+  };
 
   return (
     <AppLayout>
