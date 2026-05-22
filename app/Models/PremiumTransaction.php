@@ -34,6 +34,7 @@ class PremiumTransaction extends Model
         'amount',
         'duration',
         'post_title',
+        'attachment_path',
         'status',
         'midtrans_transaction_id',
         'payment_type',
@@ -45,12 +46,37 @@ class PremiumTransaction extends Model
         'paid_at' => 'datetime',
     ];
 
+    protected $appends = ['imageUrl'];
+
     /**
      * Relasi ke user pemilik transaksi
      */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Accessor: konversi attachment_path menjadi URL publik
+     * Jika attachment bukan gambar, return null
+     */
+    public function getImageUrlAttribute(): ?string
+    {
+        if (!$this->attachment_path) {
+            return null;
+        }
+
+        $path = $this->attachment_path;
+        
+        // Periksa apakah file adalah gambar (bukan PDF atau file lain)
+        $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        
+        if (!in_array($ext, $imageExtensions)) {
+            return null;
+        }
+
+        return \Illuminate\Support\Facades\Storage::disk('public')->url($path);
     }
 
     /**

@@ -1,10 +1,12 @@
-import { useState, useRef, useEffect, ChangeEvent, FormEvent, DragEvent } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import type { ChangeEvent, FormEvent, DragEvent } from 'react';
 import { Head, usePage } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import type { SharedData } from '@/types';
 
 type Duration = '7-hari' | '1-bulan' | '3-bulan';
 type PaymentMethod = 'virtual-account' | 'e-wallet' | 'kartu-kredit';
+type PaymentStatus = 'idle' | 'success' | 'pending' | 'error';
 
 interface DurationOption {
   id: Duration;
@@ -14,9 +16,9 @@ interface DurationOption {
 }
 
 const durationOptions: DurationOption[] = [
-  { id: '7-hari', label: '7 Hari', price: 49000 },
-  { id: '1-bulan', label: '1 Bulan', price: 149000, popular: true },
-  { id: '3-bulan', label: '3 Bulan', price: 399000 },
+  { id: '7-hari',  label: '7 Hari',   price: 49000 },
+  { id: '1-bulan', label: '1 Bulan',  price: 149000, popular: true },
+  { id: '3-bulan', label: '3 Bulan',  price: 399000 },
 ];
 
 interface PaymentOption {
@@ -67,46 +69,52 @@ declare global {
   }
 }
 
+function getCsrfToken(): string {
+  const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : '';
+}
+
 export default function PremiumPostPage() {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { auth } = usePage<SharedData>().props;
 
-  const [judul, setJudul]           = useState('');
-  const [deskripsi, setDeskripsi]   = useState('');
-  const [file, setFile]             = useState<File | null>(null);
-  const [dragActive, setDragActive] = useState(false);
-  const [duration, setDuration]     = useState<Duration>('1-bulan');
-  const [payment, setPayment]       = useState<PaymentMethod>('e-wallet');
-  const [errors, setErrors]         = useState<Record<string, string>>({});
-  const [submitting, setSubmitting] = useState(false);
-  const [paymentStatus, setPaymentStatus] = useState<'idle' | 'success' | 'pending' | 'error'>('idle');
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [judul,         setJudul]         = useState('');
+  const [deskripsi,     setDeskripsi]     = useState('');
+  const [file,          setFile]          = useState<File | null>(null);
+  const [filePreview,   setFilePreview]   = useState<string | null>(null);
+  const [uploadedPath,  setUploadedPath]  = useState<string | null>(null);
+  const [uploading,     setUploading]     = useState(false);
+  const [dragActive,    setDragActive]    = useState(false);
+  const [duration,      setDuration]      = useState<Duration>('1-bulan');
+  const [payment,       setPayment]       = useState<PaymentMethod>('e-wallet');
+  const [errors,        setErrors]        = useState<Record<string, string>>({});
+  const [submitting,    setSubmitting]    = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('idle');
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const snapUrl = import.meta.env.VITE_MIDTRANS_SNAP_URL as string;
 
   // Inject Midtrans Snap.js script sekali saja
   useEffect(() => {
     if (!snapUrl || document.getElementById('midtrans-snap-script')) return;
-
     const script = document.createElement('script');
     script.id  = 'midtrans-snap-script';
     script.src = snapUrl;
     script.setAttribute('data-client-key', import.meta.env.VITE_MIDTRANS_CLIENT_KEY ?? '');
     document.head.appendChild(script);
-
-    return () => {
-      // Tidak dihapus agar tidak reload antar navigasi
-    };
   }, [snapUrl]);
 
-  const selectedDuration =
-    durationOptions.find((d) => d.id === duration) ?? durationOptions[1];
+  const selectedDuration = durationOptions.find((d) => d.id === duration) ?? durationOptions[1];
   const subtotal = selectedDuration.price;
-  const tax = Math.round(subtotal * TAX_RATE);
-  const total = subtotal + tax;
+  const tax      = Math.round(subtotal * TAX_RATE);
+  const total    = subtotal + tax;
 
-  const handleFile = (incoming: File | null) => {
+  // ─── Upload file ke server, simpan path & preview ───────────────────────────
+  const handleFile = async (incoming: File | null) => {
     if (!incoming) {
       setFile(null);
+      setFilePreview(null);
+      setUploadedPath(null);
       return;
     }
     if (incoming.size > 10 * 1024 * 1024) {
@@ -115,6 +123,50 @@ export default function PremiumPostPage() {
     }
     setErrors((prev) => ({ ...prev, file: '' }));
     setFile(incoming);
+
+    // Preview lokal untuk gambar
+    const isImage = incoming.type.startsWith('image/');
+    if (isImage) {
+      const reader = new FileReader();
+      reader.onload = (e) => setFilePreview(e.target?.result as string);
+      reader.readAsDataURL(incoming);
+    } else {
+      setFilePreview(null);
+    }
+
+    // Upload ke server segera
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', incoming);
+
+      const res = await fetch('/api/midtrans/upload-attachment', {
+        method: 'POST',
+        headers: { 'X-XSRF-TOKEN': getCsrfToken(), 'Accept': 'application/json' },
+        credentials: 'include',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { message?: string }).message || 'Upload gagal');
+      }
+
+      const result = await res.json() as { path: string; url: string };
+      setUploadedPath(result.path);
+
+      // Jika file adalah gambar, gunakan URL server sebagai preview final
+      if (isImage) setFilePreview(result.url);
+
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Upload gagal';
+      setErrors((prev) => ({ ...prev, file: msg }));
+      setFile(null);
+      setFilePreview(null);
+      setUploadedPath(null);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleDrop = (e: DragEvent<HTMLLabelElement>) => {
@@ -125,61 +177,74 @@ export default function PremiumPostPage() {
     handleFile(dropped);
   };
 
-  /**
-   * Ambil CSRF token dari cookie (sesuai helper yang ada di api.ts)
-   */
-  const getCsrfToken = (): string => {
-    const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
-    return match ? decodeURIComponent(match[1]) : '';
-  };
-
+  // ─── Submit: request Snap token → buka popup Midtrans ───────────────────────
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    // Validasi form
     const next: Record<string, string> = {};
     if (!judul.trim())     next.judul     = 'Judul wajib diisi';
     if (!deskripsi.trim()) next.deskripsi = 'Deskripsi wajib diisi';
     setErrors((prev) => ({ ...prev, ...next }));
     if (Object.values(next).some(Boolean)) return;
 
+    if (uploading) {
+      setErrors((prev) => ({ ...prev, submit: 'Tunggu hingga file selesai diupload.' }));
+      return;
+    }
+
     setSubmitting(true);
     setPaymentStatus('idle');
 
     try {
       // 1. Request Snap token ke backend
-      const csrfToken = getCsrfToken();
-      const response  = await fetch('/api/midtrans/create-transaction', {
+      const response = await fetch('/api/midtrans/create-transaction', {
         method:  'POST',
         headers: {
-          'Content-Type':  'application/json',
-          'Accept':        'application/json',
-          'X-XSRF-TOKEN':  csrfToken,
+          'Content-Type': 'application/json',
+          'Accept':       'application/json',
+          'X-XSRF-TOKEN': getCsrfToken(),
         },
         credentials: 'include',
         body: JSON.stringify({
-          duration:   duration,
-          post_title: judul,
+          duration:        duration,
+          post_title:      judul,
+          attachment_path: uploadedPath,
         }),
       });
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        throw new Error(err.message || 'Gagal membuat transaksi');
+        throw new Error((err as { message?: string }).message || 'Gagal membuat transaksi');
       }
 
-      const data: { snap_token: string; order_id: string; amount: number } = await response.json();
+      const data = await response.json() as { snap_token: string; order_id: string; amount: number };
 
       // 2. Buka Midtrans Snap popup
       if (!window.snap) {
         throw new Error('Midtrans Snap belum siap. Silakan refresh halaman.');
       }
 
-      setSubmitting(false); // Popup sudah terbuka, hapus loading di tombol
+      setSubmitting(false);
 
       window.snap.pay(data.snap_token, {
-        onSuccess: (_result) => {
+        onSuccess: async (_result) => {
           setPaymentStatus('success');
+
+          // Verifikasi & update status ke backend (fallback untuk localhost)
+          try {
+            await fetch('/api/midtrans/check-and-mark-paid', {
+              method:  'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept':       'application/json',
+                'X-XSRF-TOKEN': getCsrfToken(),
+              },
+              credentials: 'include',
+              body: JSON.stringify({ order_id: data.order_id }),
+            });
+          } catch (_err) {
+            console.warn('check-and-mark-paid failed, webhook will handle it');
+          }
         },
         onPending: (_result) => {
           setPaymentStatus('pending');
@@ -188,10 +253,7 @@ export default function PremiumPostPage() {
           setPaymentStatus('error');
         },
         onClose: () => {
-          // User menutup popup tanpa bayar — biarkan apa adanya
-          if (paymentStatus === 'idle') {
-            setSubmitting(false);
-          }
+          setSubmitting(false);
         },
       });
 
@@ -232,6 +294,7 @@ export default function PremiumPostPage() {
               </div>
 
               <div className="space-y-5">
+                {/* Judul */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[11px] font-semibold tracking-wider text-gray-500 uppercase">
                     Judul Kegiatan
@@ -239,7 +302,7 @@ export default function PremiumPostPage() {
                   <input
                     type="text"
                     value={judul}
-                    onChange={(e) => {
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
                       setJudul(e.target.value);
                       if (errors.judul) setErrors((p) => ({ ...p, judul: '' }));
                     }}
@@ -248,11 +311,10 @@ export default function PremiumPostPage() {
                       errors.judul ? 'border-red-300' : 'border-gray-200'
                     }`}
                   />
-                  {errors.judul && (
-                    <p className="text-[11px] text-red-500">{errors.judul}</p>
-                  )}
+                  {errors.judul && <p className="text-[11px] text-red-500">{errors.judul}</p>}
                 </div>
 
+                {/* Deskripsi */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[11px] font-semibold tracking-wider text-gray-500 uppercase">
                     Deskripsi
@@ -269,21 +331,39 @@ export default function PremiumPostPage() {
                       errors.deskripsi ? 'border-red-300' : 'border-gray-200'
                     }`}
                   />
-                  {errors.deskripsi && (
-                    <p className="text-[11px] text-red-500">{errors.deskripsi}</p>
-                  )}
+                  {errors.deskripsi && <p className="text-[11px] text-red-500">{errors.deskripsi}</p>}
                 </div>
 
+                {/* Lampiran */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[11px] font-semibold tracking-wider text-gray-500 uppercase">
                     Lampiran Pendukung
                   </label>
+
+                  {/* Preview gambar jika ada */}
+                  {filePreview && (
+                    <div className="relative w-full rounded-lg overflow-hidden border border-amber-200 bg-gray-50" style={{ height: '160px' }}>
+                      <img src={filePreview} alt="Preview" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => { setFile(null); setFilePreview(null); setUploadedPath(null); }}
+                        className="absolute top-2 right-2 w-7 h-7 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center transition-colors"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                      {uploading && (
+                        <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+                          <span className="text-xs text-amber-700 font-medium">Mengupload...</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <label
                     htmlFor="lampiran"
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      setDragActive(true);
-                    }}
+                    onDragOver={(e: DragEvent<HTMLLabelElement>) => { e.preventDefault(); setDragActive(true); }}
                     onDragLeave={() => setDragActive(false)}
                     onDrop={handleDrop}
                     className={`flex flex-col items-center justify-center gap-1.5 min-h-[110px] rounded-lg border-2 border-dashed cursor-pointer transition-all py-6 px-4 text-center ${
@@ -294,30 +374,35 @@ export default function PremiumPostPage() {
                           : 'border-gray-300 bg-white hover:border-amber-300 hover:bg-amber-50/40'
                     }`}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                    </svg>
+                    {uploading ? (
+                      <svg className="animate-spin w-7 h-7 text-amber-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                      </svg>
+                    )}
                     <p className="text-sm text-gray-600">
-                      {file ? (
+                      {uploading ? (
+                        <span className="font-medium text-amber-600">Mengupload...</span>
+                      ) : file ? (
                         <span className="font-medium text-amber-600">{file.name}</span>
                       ) : (
                         'Klik untuk unggah atau seret file'
                       )}
                     </p>
-                    <p className="text-[11px] text-gray-400">
-                      PDF, PNG, atau JPG (Maks. 10MB)
-                    </p>
+                    <p className="text-[11px] text-gray-400">PDF, PNG, atau JPG (Maks. 10MB)</p>
                     <input
                       ref={fileInputRef}
                       id="lampiran"
                       type="file"
                       accept=".pdf,image/png,image/jpeg"
                       className="hidden"
-                      onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => handleFile(e.target.files?.[0] ?? null)}
                     />
-                    {errors.file && (
-                      <p className="text-[11px] text-red-500">{errors.file}</p>
-                    )}
+                    {errors.file && <p className="text-[11px] text-red-500">{errors.file}</p>}
                   </label>
                 </div>
               </div>
@@ -356,11 +441,7 @@ export default function PremiumPostPage() {
                       <p className="text-[10px] font-semibold tracking-wider text-gray-500 uppercase">
                         {opt.label}
                       </p>
-                      <p
-                        className={`mt-2 text-base font-bold ${
-                          active ? 'text-amber-700' : 'text-gray-900'
-                        }`}
-                      >
+                      <p className={`mt-2 text-base font-bold ${active ? 'text-amber-700' : 'text-gray-900'}`}>
                         {formatRupiah(opt.price)}
                       </p>
                     </button>
@@ -375,9 +456,7 @@ export default function PremiumPostPage() {
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden sticky top-24">
               <div className="h-1.5 bg-amber-400" />
               <div className="p-6 sm:p-7">
-                <h2 className="text-base font-semibold text-gray-900 mb-5">
-                  Ringkasan Pembayaran
-                </h2>
+                <h2 className="text-base font-semibold text-gray-900 mb-5">Ringkasan Pembayaran</h2>
 
                 <div className="space-y-3 text-sm">
                   <div className="flex items-center justify-between text-gray-600">
@@ -394,9 +473,7 @@ export default function PremiumPostPage() {
 
                 <div className="flex items-center justify-between mb-6">
                   <span className="text-sm font-semibold text-gray-900">Total Bayar</span>
-                  <span className="text-lg font-bold text-amber-600">
-                    {formatRupiah(total)}
-                  </span>
+                  <span className="text-lg font-bold text-amber-600">{formatRupiah(total)}</span>
                 </div>
 
                 <p className="text-[10px] font-semibold tracking-wider text-gray-500 uppercase mb-3">
@@ -414,11 +491,9 @@ export default function PremiumPostPage() {
                             : 'border-gray-200 bg-white hover:border-amber-200'
                         }`}
                       >
-                        <span
-                          className={`flex items-center justify-center w-7 h-7 rounded-md ${
-                            active ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-500'
-                          }`}
-                        >
+                        <span className={`flex items-center justify-center w-7 h-7 rounded-md ${
+                          active ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-500'
+                        }`}>
                           <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                             <path strokeLinecap="round" strokeLinejoin="round" d={opt.iconPath} />
                           </svg>
@@ -437,7 +512,7 @@ export default function PremiumPostPage() {
                   })}
                 </div>
 
-                {/* Alert status pembayaran */}
+                {/* Status alerts */}
                 {paymentStatus === 'success' && (
                   <div className="mb-4 p-3 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm font-medium">
                     ✅ Pembayaran berhasil! Post Anda sedang diproses.
@@ -461,10 +536,16 @@ export default function PremiumPostPage() {
 
                 <button
                   type="submit"
-                  disabled={submitting || paymentStatus === 'success'}
+                  disabled={submitting || uploading || paymentStatus === 'success'}
                   className="w-full py-3 text-sm font-semibold text-white bg-amber-700 hover:bg-amber-800 disabled:bg-amber-300 disabled:cursor-not-allowed rounded-full shadow-sm transition-colors"
                 >
-                  {submitting ? 'Memproses...' : paymentStatus === 'success' ? 'Pembayaran Selesai ✓' : 'Bayar Sekarang'}
+                  {submitting
+                    ? 'Memproses...'
+                    : uploading
+                      ? 'Menunggu upload...'
+                      : paymentStatus === 'success'
+                        ? 'Pembayaran Selesai ✓'
+                        : 'Bayar Sekarang'}
                 </button>
 
                 <p className="text-[10px] text-gray-400 text-center tracking-wider uppercase mt-4 leading-relaxed">

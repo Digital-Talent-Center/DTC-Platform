@@ -10,6 +10,7 @@ import type {
   ProfileExtension,
   PaginatedResponse,
   ApiResponse,
+  PremiumTransaction,
 } from '@/types';
 
 const API_BASE = '/api';
@@ -501,6 +502,21 @@ export const api = {
     deleteAvatar: async (): Promise<ApiResponse<null>> => {
       return fetch(`${API_BASE}/profile/avatar`, buildFetchOptions('DELETE'))
         .then(r => handleResponse<ApiResponse<null>>(r));
+    },
+  },
+
+  /**
+   * Premium Transactions API
+   */
+  premiumTransactions: {
+    /**
+     * Ambil daftar Premium Post yang sudah berhasil dibayar (status = 'paid').
+     * Digunakan oleh section "Premium Highlights" di halaman dashboard.
+     * Mengembalikan maksimal 4 item terbaru.
+     */
+    highlights: async (): Promise<{ data: PremiumTransaction[] }> => {
+      return fetch(`${API_BASE}/premium-transactions/highlights`, buildFetchOptions('GET'))
+        .then(r => handleResponse<{ data: PremiumTransaction[] }>(r));
     },
   },
 };

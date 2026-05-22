@@ -11,6 +11,7 @@ use App\Http\Controllers\ProfileExtensionController;
 use App\Http\Controllers\GuideController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\MidtransController;
+use App\Http\Controllers\PremiumTransactionController;
 
 // All API routes require authentication via session (shared web middleware)
 Route::middleware('auth')->group(function () {
@@ -113,7 +114,16 @@ Route::middleware('auth')->group(function () {
 
     // Midtrans Routes — create transaction (auth required)
     Route::prefix('midtrans')->group(function () {
-        Route::post('create-transaction', [MidtransController::class, 'createTransaction']);
+        Route::post('upload-attachment',   [MidtransController::class, 'uploadAttachment']);
+        Route::post('create-transaction',  [MidtransController::class, 'createTransaction']);
+        // Fallback untuk update status saat webhook tidak bisa menjangkau localhost
+        Route::post('check-and-mark-paid', [MidtransController::class, 'checkAndMarkPaid']);
+    });
+
+    // Premium Transactions Routes
+    Route::prefix('premium-transactions')->group(function () {
+        // GET /api/premium-transactions/highlights — paid posts untuk Premium Highlights di dashboard
+        Route::get('highlights', [PremiumTransactionController::class, 'highlights']);
     });
 });
 

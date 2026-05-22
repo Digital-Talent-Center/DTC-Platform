@@ -5,6 +5,7 @@ namespace App\Services;
 use Midtrans\Config;
 use Midtrans\Snap;
 use Midtrans\Notification;
+use Midtrans\Transaction;
 
 /**
  * MidtransService
@@ -76,6 +77,24 @@ class MidtransService
     }
 
     /**
+     * Query status transaksi langsung ke Midtrans API (server-to-server).
+     *
+     * Digunakan oleh checkAndMarkPaid sebagai fallback saat webhook tidak
+     * bisa menjangkau server (misalnya saat development di localhost).
+     *
+     * @param  string  $orderId  Order ID yang akan dicek
+     * @return array             Response dari Midtrans (transaction_status, fraud_status, dll)
+     * @throws \Exception
+     */
+    public function getTransactionStatus(string $orderId): array
+    {
+        $status = Transaction::status($orderId);
+
+        // Midtrans mengembalikan object, convert ke array
+        return (array) $status;
+    }
+
+    /**
      * Map Midtrans transaction_status + fraud_status ke status internal app.
      *
      * @param  string       $transactionStatus  Status dari Midtrans
@@ -97,6 +116,6 @@ class MidtransService
 
             // Gagal / fraud
             default => 'failed',
-        };
+        ];
     }
 }

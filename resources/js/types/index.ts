@@ -60,6 +60,25 @@ export interface Post {
     isLikedByUser?: boolean;
 }
 
+/**
+ * Premium Transaction Interface
+ * Merepresentasikan data dari tabel premium_transactions yang sudah berhasil dibayar.
+ */
+export interface PremiumTransaction {
+    id: number;
+    userId: number;
+    postTitle: string;
+    duration: string;
+    amount: number;
+    paymentType?: string;
+    paidAt?: string;
+    createdAt: string;
+    updatedAt: string;
+    user?: Pick<User, 'id' | 'name'>;
+    attachmentPath?: string | null;
+    imageUrl?: string | null;
+}
+
 export interface Comment {
     id: number;
     postId: number;

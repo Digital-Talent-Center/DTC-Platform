@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, Head } from "@inertiajs/react";
 import AppLayout from "@/layouts/app-layout";
-import { api, type Post } from "@/services/api";
+import { api } from "@/services/api";
+import type { PremiumTransaction } from "@/types";
 
 interface MenuItem {
   label: string;
@@ -98,8 +99,8 @@ function MenuIcon({ path, className }: { path: string; className?: string }) {
   );
 }
 
-/* ──────────────── Premium Post Popup Modal ──────────────── */
-function PostModal({ post, onClose }: { post: Post; onClose: () => void }) {
+/* ──────────────── Premium Post Detail Modal ──────────────── */
+function PremiumModal({ tx, onClose }: { tx: PremiumTransaction; onClose: () => void }) {
   useEffect(() => {
     document.body.style.overflow = "hidden";
     function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
@@ -109,6 +110,9 @@ function PostModal({ post, onClose }: { post: Post; onClose: () => void }) {
       window.removeEventListener("keydown", onKey);
     };
   }, [onClose]);
+
+  // Gunakan paidAt jika ada, fallback ke createdAt
+  const displayDate = tx.paidAt ?? tx.createdAt;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={onClose}>
@@ -125,9 +129,14 @@ function PostModal({ post, onClose }: { post: Post; onClose: () => void }) {
           </svg>
         </button>
 
+        {/* Sisi kiri: gambar / placeholder */}
         <div className="md:w-1/2 w-full h-64 md:h-auto bg-gray-100 flex-shrink-0 relative overflow-hidden">
-          {post.imageUrl ? (
-            <img src={post.imageUrl} alt="Post" className="w-full h-full object-cover" />
+          {tx.imageUrl ? (
+            <img 
+              src={tx.imageUrl} 
+              alt={tx.postTitle}
+              className="w-full h-full object-cover"
+            />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
               <span className="text-gray-500">No image</span>
@@ -136,14 +145,15 @@ function PostModal({ post, onClose }: { post: Post; onClose: () => void }) {
           <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-black/30 to-transparent md:hidden" />
         </div>
 
+        {/* Sisi kanan: detail konten */}
         <div className="md:w-1/2 w-full p-6 sm:p-8 flex flex-col overflow-y-auto">
           <div className="flex items-center gap-3 mb-5">
-            <div className={`w-11 h-11 rounded-full bg-gradient-to-br ${getAvatarColor(post.userId)} flex items-center justify-center text-white text-sm font-bold shadow-md`}>
-              {getInitials(post.user?.name || 'AA')}
+            <div className={`w-11 h-11 rounded-full bg-gradient-to-br ${getAvatarColor(tx.userId)} flex items-center justify-center text-white text-sm font-bold shadow-md`}>
+              {getInitials(tx.user?.name || 'AA')}
             </div>
             <div>
-              <p className="font-semibold text-gray-900 text-sm">{post.user?.name || 'Anonymous'}</p>
-              <p className="text-xs text-gray-400">{formatTime(post.createdAt)}</p>
+              <p className="font-semibold text-gray-900 text-sm">{tx.user?.name || 'Anonymous'}</p>
+              <p className="text-xs text-gray-400">{formatTime(displayDate)}</p>
             </div>
           </div>
 
@@ -151,15 +161,21 @@ function PostModal({ post, onClose }: { post: Post; onClose: () => void }) {
             ⭐ Post
           </span>
 
-          <p className="text-gray-700 text-sm leading-relaxed flex-1">{post.content}</p>
+          <p className="text-gray-700 text-sm leading-relaxed flex-1">{tx.postTitle}</p>
 
-          <div className="mt-6 pt-4 border-t border-gray-100 flex items-center gap-2">
+          <div className="mt-4 pt-3 border-t border-gray-100 space-y-1">
+            <p className="text-[11px] text-gray-400">
+              Durasi layanan: <span className="font-semibold text-gray-600">{tx.duration}</span>
+            </p>
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-gray-100 flex items-center gap-2">
             <div className="w-5 h-5 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
               <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3 text-white" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
               </svg>
             </div>
-            <span className="text-xs font-medium text-gray-400">Highlighted Post</span>
+            <span className="text-xs font-medium text-gray-400">Highlighted Premium Post</span>
           </div>
         </div>
       </div>
@@ -169,26 +185,27 @@ function PostModal({ post, onClose }: { post: Post; onClose: () => void }) {
 
 /* ──────────────── Premium Posts Carousel ──────────────── */
 function PremiumPostsSection() {
-  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [selectedTx, setSelectedTx] = useState<PremiumTransaction | null>(null);
+  const [highlights, setHighlights] = useState<PremiumTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
   useEffect(() => {
-    const loadPosts = async () => {
+    const loadHighlights = async () => {
       try {
-        const response = await api.posts.list(1, 5);
-        setPosts(response.data);
+        // Ambil hanya premium post yang sudah dibayar (status = 'paid')
+        const response = await api.premiumTransactions.highlights();
+        setHighlights(response.data);
       } catch (err) {
-        console.error('Failed to load posts:', err);
+        console.error('Failed to load premium highlights:', err);
       } finally {
         setLoading(false);
       }
     };
 
-    loadPosts();
+    loadHighlights();
   }, []);
 
   function updateScrollButtons() {
@@ -203,7 +220,7 @@ function PremiumPostsSection() {
     const el = scrollRef.current;
     if (el) el.addEventListener("scroll", updateScrollButtons, { passive: true });
     return () => el?.removeEventListener("scroll", updateScrollButtons);
-  }, []);
+  }, [highlights]);
 
   function scroll(dir: number) {
     const el = scrollRef.current;
@@ -211,6 +228,39 @@ function PremiumPostsSection() {
     el.scrollBy({ left: dir * 380, behavior: "smooth" });
   }
 
+  /* ── Header section yang sama dipakai di semua state ── */
+  const SectionHeader = () => (
+    <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-md shadow-amber-200/50">
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+          </svg>
+        </div>
+        <div>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Premium Highlights</h2>
+          <p className="text-xs text-gray-400 mt-0.5">Premium Highlights Post</p>
+        </div>
+      </div>
+
+      <div className="hidden sm:flex items-center gap-2">
+        <button onClick={() => scroll(-1)} disabled={!canScrollLeft}
+          className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all cursor-pointer ${canScrollLeft ? "border-gray-300 text-gray-600 hover:bg-gray-100 hover:border-gray-400" : "border-gray-100 text-gray-300 cursor-not-allowed"}`}>
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+          </svg>
+        </button>
+        <button onClick={() => scroll(1)} disabled={!canScrollRight}
+          className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all cursor-pointer ${canScrollRight ? "border-gray-300 text-gray-600 hover:bg-gray-100 hover:border-gray-400" : "border-gray-100 text-gray-300 cursor-not-allowed"}`}>
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+
+  /* ── Loading state ── */
   if (loading) {
     return (
       <div className="mt-10">
@@ -222,112 +272,138 @@ function PremiumPostsSection() {
           </div>
           <div>
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Premium Highlights</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Loading posts...</p>
+            <p className="text-xs text-gray-400 mt-0.5">Memuat data...</p>
           </div>
+        </div>
+        {/* Skeleton cards */}
+        <div className="flex gap-5">
+          {[1, 2].map((i) => (
+            <div key={i} className="flex-shrink-0 w-[360px] sm:w-[420px] h-[200px] bg-gray-100 rounded-2xl animate-pulse" />
+          ))}
         </div>
       </div>
     );
   }
 
-  if (posts.length === 0) {
+  /* ── Empty state: belum ada premium post yang dibayar ── */
+  if (highlights.length === 0) {
     return (
-      <div className="mt-10 bg-white rounded-2xl border border-gray-100 p-8 text-center">
-        <p className="text-gray-500">No posts yet. Start sharing!</p>
+      <div className="mt-10">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-md shadow-amber-200/50">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Premium Highlights</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Premium Highlights Post</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 p-10 flex flex-col items-center gap-3 text-center">
+          <div className="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center mb-1">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+            </svg>
+          </div>
+          <p className="text-gray-700 font-semibold">Belum ada Premium Post yang tersedia.</p>
+          <p className="text-sm text-gray-400 max-w-xs">
+            Premium Post akan muncul di sini setelah pembayaran berhasil dikonfirmasi.
+          </p>
+          <Link
+            href="/dashboard/premium-post"
+            className="mt-2 inline-flex items-center gap-2 px-5 py-2 rounded-full bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition-colors"
+          >
+            Buat Premium Post
+          </Link>
+        </div>
       </div>
     );
   }
 
+  /* ── Data tersedia: tampilkan carousel ── */
   return (
     <>
       <div className="mt-10 relative">
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-md shadow-amber-200/50">
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
-            </div>
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Premium Highlights</h2>
-              <p className="text-xs text-gray-400 mt-0.5">Premium Highlights Post</p>
-            </div>
-          </div>
+        <SectionHeader />
 
-          <div className="hidden sm:flex items-center gap-2">
-            <button onClick={() => scroll(-1)} disabled={!canScrollLeft}
-              className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all cursor-pointer ${canScrollLeft ? "border-gray-300 text-gray-600 hover:bg-gray-100 hover:border-gray-400" : "border-gray-100 text-gray-300 cursor-not-allowed"}`}>
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-              </svg>
-            </button>
-            <button onClick={() => scroll(1)} disabled={!canScrollRight}
-              className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all cursor-pointer ${canScrollRight ? "border-gray-300 text-gray-600 hover:bg-gray-100 hover:border-gray-400" : "border-gray-100 text-gray-300 cursor-not-allowed"}`}>
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <div ref={scrollRef}
+        <div
+          ref={scrollRef}
           className="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hide"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
-          {posts.map((post, idx) => (
-            <div key={post.id}
-              onClick={() => setSelectedPost(post)}
-              className="group flex-shrink-0 w-[360px] sm:w-[420px] bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-xl hover:border-amber-200 hover:-translate-y-1 transition-all duration-300 cursor-pointer snap-start"
-            >
-              <div className="flex h-[180px] sm:h-[200px]">
-                <div className="w-[45%] relative overflow-hidden bg-gray-100">
-                  {post.imageUrl ? (
-                    <img src={post.imageUrl} alt="Post"
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
-                      <span className="text-gray-500 text-xs">No image</span>
-                    </div>
-                  )}
-                  <div className="absolute top-3 left-0 bg-gradient-to-r from-amber-500 to-orange-400 text-white text-[10px] font-bold px-2.5 py-1 rounded-r-full shadow-md flex items-center gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                    POST
-                  </div>
-                </div>
-
-                <div className="w-[55%] p-4 flex flex-col justify-between">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className={`w-7 h-7 rounded-full bg-gradient-to-br ${getAvatarColor(idx)} flex items-center justify-center text-white text-[10px] font-bold`}>
-                      {getInitials(post.user?.name || 'AA')}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-gray-800 truncate">{post.user?.name || 'Anonymous'}</p>
-                      <p className="text-[10px] text-gray-400">{formatTime(post.createdAt)}</p>
+          {highlights.map((tx, idx) => {
+            const displayDate = tx.paidAt ?? tx.createdAt;
+            return (
+              <div
+                key={tx.id}
+                onClick={() => setSelectedTx(tx)}
+                className="group flex-shrink-0 w-[360px] sm:w-[420px] bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-xl hover:border-amber-200 hover:-translate-y-1 transition-all duration-300 cursor-pointer snap-start"
+              >
+                <div className="flex h-[180px] sm:h-[200px]">
+                  {/* Kolom kiri: gambar / placeholder */}
+                  <div className="w-[45%] relative overflow-hidden bg-gray-100">
+                    {tx.imageUrl ? (
+                      <img 
+                        src={tx.imageUrl} 
+                        alt={tx.postTitle}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
+                        <span className="text-gray-500 text-xs">No image</span>
+                      </div>
+                    )}
+                    {/* Badge POST */}
+                    <div className="absolute top-3 left-0 bg-gradient-to-r from-amber-500 to-orange-400 text-white text-[10px] font-bold px-2.5 py-1 rounded-r-full shadow-md flex items-center gap-1">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                      POST
                     </div>
                   </div>
 
-                  <span className="inline-flex self-start px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-600 mb-2">
-                    Post
-                  </span>
+                  {/* Kolom kanan: info */}
+                  <div className="w-[55%] p-4 flex flex-col justify-between">
+                    {/* Avatar + nama user */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className={`w-7 h-7 rounded-full bg-gradient-to-br ${getAvatarColor(idx)} flex items-center justify-center text-white text-[10px] font-bold`}>
+                        {getInitials(tx.user?.name || 'AA')}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-gray-800 truncate">{tx.user?.name || 'Anonymous'}</p>
+                        <p className="text-[10px] text-gray-400">{formatTime(displayDate)}</p>
+                      </div>
+                    </div>
 
-                  <p className="text-xs text-gray-600 leading-relaxed line-clamp-3 flex-1">
-                    {post.content}
-                  </p>
+                    {/* Badge tipe */}
+                    <span className="inline-flex self-start px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-600 mb-2">
+                      Post
+                    </span>
 
-                  <div className="flex items-center gap-1 mt-2 text-amber-600 group-hover:text-amber-700 transition-colors">
-                    <span className="text-[11px] font-semibold">Lihat Selengkapnya</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                    </svg>
+                    {/* Judul/konten post — postTitle dari premium transaction */}
+                    <p className="text-xs text-gray-600 leading-relaxed line-clamp-3 flex-1">
+                      {tx.postTitle}
+                    </p>
+
+                    {/* Tombol lihat selengkapnya */}
+                    <div className="flex items-center gap-1 mt-2 text-amber-600 group-hover:text-amber-700 transition-colors">
+                      <span className="text-[11px] font-semibold">Lihat Selengkapnya</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
-          <Link href="/timeline"
-            className="flex-shrink-0 w-[180px] bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-100 flex flex-col items-center justify-center gap-3 hover:shadow-lg hover:border-amber-200 transition-all cursor-pointer snap-start">
+          {/* Tombol "Lihat Semua" mengarah ke halaman premium-post */}
+          <Link
+            href="/dashboard/premium-post"
+            className="flex-shrink-0 w-[180px] bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-100 flex flex-col items-center justify-center gap-3 hover:shadow-lg hover:border-amber-200 transition-all cursor-pointer snap-start"
+          >
             <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center">
               <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
@@ -338,7 +414,7 @@ function PremiumPostsSection() {
         </div>
       </div>
 
-      {selectedPost && <PostModal post={selectedPost} onClose={() => setSelectedPost(null)} />}
+      {selectedTx && <PremiumModal tx={selectedTx} onClose={() => setSelectedTx(null)} />}
     </>
   );
 }
