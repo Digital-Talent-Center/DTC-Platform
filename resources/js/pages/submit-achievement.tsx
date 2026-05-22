@@ -74,6 +74,7 @@ export default function SubmitAchievementPage() {
   const [dragActive, setDragActive] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleChange = (
@@ -177,7 +178,6 @@ export default function SubmitAchievementPage() {
           if (contentType?.includes('application/json')) {
             const errorData = await response.json();
             if (errorData.errors) {
-              // Laravel validation errors
               const errorList = Object.values(errorData.errors).flat().join(', ');
               errorMessage = errorList || errorData.message || errorMessage;
             } else {
@@ -191,7 +191,7 @@ export default function SubmitAchievementPage() {
       }
       
       const data = await response.json();
-      alert('Prestasi berhasil dikirim! Status: Pending untuk diverifikasi.');
+      setShowSuccessModal(true);
       setForm(initialForm);
       setFile(null);
       setPreview(null);
@@ -546,6 +546,48 @@ export default function SubmitAchievementPage() {
           </div>
         </form>
       </div>
+
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="flex flex-col items-center text-center">
+              <div className="flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-8 h-8 text-green-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
+
+              <h2 className="text-xl font-bold text-gray-900">
+                Prestasi Berhasil Dikirim
+              </h2>
+
+              <p className="mt-2 text-sm text-gray-500">
+                Data prestasi berhasil dikirim dan saat ini sedang menunggu proses
+                verifikasi admin.
+              </p>
+
+              <button
+                type="button"
+                onClick={() => setShowSuccessModal(false)}
+                className="mt-6 inline-flex items-center justify-center rounded-lg bg-amber-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-amber-800 transition-colors"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }
