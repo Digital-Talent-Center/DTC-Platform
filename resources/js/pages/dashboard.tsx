@@ -132,8 +132,8 @@ function PremiumModal({ tx, onClose }: { tx: PremiumTransaction; onClose: () => 
         {/* Sisi kiri: gambar / placeholder */}
         <div className="md:w-1/2 w-full h-64 md:h-auto bg-gray-100 flex-shrink-0 relative overflow-hidden">
           {tx.imageUrl ? (
-            <img 
-              src={tx.imageUrl} 
+            <img
+              src={tx.imageUrl}
               alt={tx.postTitle}
               className="w-full h-full object-cover"
             />
@@ -344,8 +344,8 @@ function PremiumPostsSection() {
                   {/* Kolom kiri: gambar / placeholder */}
                   <div className="w-[45%] relative overflow-hidden bg-gray-100">
                     {tx.imageUrl ? (
-                      <img 
-                        src={tx.imageUrl} 
+                      <img
+                        src={tx.imageUrl}
                         alt={tx.postTitle}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
@@ -424,7 +424,7 @@ export default function DashboardPage() {
   return (
     <AppLayout>
       <Head title="Dashboard" />
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      <div className="mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12" style={{ maxWidth: '1200px', width: '100%' }}>
         <div className="mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight">Student Dashboard</h1>
           <p className="mt-2 text-gray-500">Manage your academic progress and digital learning resources.</p>

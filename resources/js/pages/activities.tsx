@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import AppLayout from "@/layouts/app-layout";
 import { Head, Link } from "@inertiajs/react";
+import { api } from "@/services/api";
 
 type ItemType = 'event' | 'task';
 
@@ -82,15 +83,15 @@ function normalizeDate(date: any) {
 }
 
 // ─── Create Modal ───────────────────────────────────────────────
-function CreateModal({ onClose, onSave, loading }: { onClose: () => void; onSave: (item: Omit<ActivityItem, 'id'>) => Promise<void>; loading: boolean }) {
-  const [activeType, setActiveType] = useState<ItemType>('event');
+function CreateModal({ initialType = 'event', onClose, onSave, loading }: { initialType?: ItemType; onClose: () => void; onSave: (item: Omit<ActivityItem, 'id'>) => Promise<void>; loading: boolean }) {
+  const [activeType, setActiveType] = useState<ItemType>(initialType);
   const [title, setTitle] = useState('');
   const [date, setDate] = useState(getTodayStr());
   const [startTime, setStartTime] = useState(getNowTime());
   const [endTime, setEndTime] = useState(getEndTime(getNowTime()));
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
-  const [deadline, setDeadline] = useState('');
+  const [deadline, setDeadline] = useState(getTodayStr());
   const [error, setError] = useState('');
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -110,12 +111,12 @@ function CreateModal({ onClose, onSave, loading }: { onClose: () => void; onSave
       await onSave({
         type: activeType,
         title: title.trim(),
-        date,
-        start_time: startTime,
-        end_time: endTime,
+        date: activeType === 'task' ? (deadline || getTodayStr()) : date,
+        start_time: activeType === 'event' ? startTime : undefined,
+        end_time: activeType === 'event' ? endTime : undefined,
         description,
         location: activeType === 'event' ? location : undefined,
-        deadline: activeType === 'task' ? deadline : undefined,
+        deadline: activeType === 'task' ? (deadline || getTodayStr()) : undefined,
         status: 'pending',
       });
     } catch (err: any) {
@@ -137,14 +138,22 @@ function CreateModal({ onClose, onSave, loading }: { onClose: () => void; onSave
         {/* Title Input */}
         <div className="px-6 pb-4">
           <input type="text" placeholder="Add title" value={title} onChange={(e) => setTitle(e.target.value)}
-            className="w-full text-xl font-medium text-gray-900 placeholder-gray-300 border-b-2 border-amber-400 pb-2 focus:outline-none focus:border-amber-500 bg-transparent" autoFocus />
+            className={`w-full text-xl font-medium text-gray-900 placeholder-gray-300 border-b-2 pb-2 focus:outline-none bg-transparent transition-all ${
+              activeType === 'event' ? 'border-amber-400 focus:border-amber-500' : 'border-blue-400 focus:border-blue-500'
+            }`} autoFocus />
         </div>
 
         {/* Type Tabs */}
         <div className="px-6 pb-4 flex items-center gap-2">
           {(['event', 'task'] as ItemType[]).map((t) => (
             <button key={t} onClick={() => setActiveType(t)}
-              className={`px-4 py-1.5 text-sm font-medium rounded-full transition-all ${activeType === t ? 'bg-amber-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}>
+              className={`px-4 py-1.5 text-sm font-medium rounded-full transition-all ${
+                activeType === t
+                  ? t === 'event'
+                    ? 'bg-amber-500 text-white shadow-sm'
+                    : 'bg-blue-600 text-white shadow-sm'
+                  : 'text-gray-500 hover:bg-gray-100'
+              }`}>
               {t === 'event' ? 'Event' : 'Task'}
             </button>
           ))}
@@ -161,41 +170,49 @@ function CreateModal({ onClose, onSave, loading }: { onClose: () => void; onSave
 
         {/* Form Fields */}
         <div className="px-6 pb-6 space-y-4">
-          {/* Date & Time */}
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 flex items-center justify-center text-gray-400 flex-shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            </div>
-            <div className="flex-1 space-y-2">
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
-              <div className="flex items-center gap-2">
-                <input type="time" value={startTime} onChange={(e) => { setStartTime(e.target.value); setEndTime(getEndTime(e.target.value)); }}
-                  className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
-                <span className="text-gray-400 text-sm">–</span>
-                <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)}
-                  className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
-              </div>
-            </div>
-          </div>
-
-          {/* Conditional: Location (Event) or Deadline (Task) */}
           {activeType === 'event' ? (
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 flex items-center justify-center text-gray-400 flex-shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
+            <>
+              {/* Date & Time */}
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 flex items-center justify-center text-gray-400 flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <div className="flex-1 space-y-2">
+                  <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
+                  <div className="flex items-center gap-2">
+                    <input type="time" value={startTime} onChange={(e) => { setStartTime(e.target.value); setEndTime(getEndTime(e.target.value)); }}
+                      className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
+                    <span className="text-gray-400 text-sm">–</span>
+                    <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)}
+                      className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
+                  </div>
+                </div>
               </div>
-              <input type="text" placeholder="Add location" value={location} onChange={(e) => setLocation(e.target.value)}
-                className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
-            </div>
+
+              {/* Location */}
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 flex items-center justify-center text-gray-400 flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
+                </div>
+                <input type="text" placeholder="Add location" value={location} onChange={(e) => setLocation(e.target.value)}
+                  className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
+              </div>
+            </>
           ) : (
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 flex items-center justify-center text-gray-400 flex-shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <>
+              {/* Deadline Date */}
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 flex items-center justify-center text-gray-400 flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <div className="flex-1">
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Deadline Date</label>
+                  <input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent" />
+                </div>
               </div>
-              <input type="date" placeholder="Add deadline" value={deadline} onChange={(e) => setDeadline(e.target.value)}
-                className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
-            </div>
+            </>
           )}
 
           {/* Description */}
@@ -204,7 +221,9 @@ function CreateModal({ onClose, onSave, loading }: { onClose: () => void; onSave
               <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" /></svg>
             </div>
             <textarea placeholder="Add description" value={description} onChange={(e) => setDescription(e.target.value)} rows={3}
-              className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
+              className={`flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:border-transparent ${
+                activeType === 'event' ? 'focus:ring-amber-400' : 'focus:ring-blue-400'
+              }`} />
           </div>
         </div>
 
@@ -212,7 +231,9 @@ function CreateModal({ onClose, onSave, loading }: { onClose: () => void; onSave
         <div className="px-6 pb-6 flex items-center justify-end gap-3">
           <button onClick={onClose} disabled={loading} className="px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-xl transition-colors disabled:opacity-50">Cancel</button>
           <button onClick={handleSubmit} disabled={!title.trim() || loading}
-            className="px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-xl shadow-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2">
+            className={`px-6 py-2.5 text-white text-sm font-semibold rounded-xl shadow-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 ${
+              activeType === 'event' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-blue-600 hover:bg-blue-700'
+            }`}>
             {loading && <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
             {loading ? 'Saving...' : 'Save'}
           </button>
@@ -225,6 +246,7 @@ function CreateModal({ onClose, onSave, loading }: { onClose: () => void; onSave
 // ─── Main Page ──────────────────────────────────────────────────
 export default function ActivitiesPage() {
   const [showModal, setShowModal] = useState(false);
+  const [modalInitialType, setModalInitialType] = useState<ItemType>('event');
   const [createDropdown, setCreateDropdown] = useState(false);
   const [items, setItems] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -244,9 +266,7 @@ export default function ActivitiesPage() {
     const fetchActivities = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/activities');
-        if (!response.ok) throw new Error('Failed to fetch activities');
-        const data = await response.json();
+        const data = await api.activities.list();
         
         // Transform API data to component format
         const list = data.data ?? [];
@@ -298,38 +318,9 @@ export default function ActivitiesPage() {
         deadline: item.deadline ?? null
       };
 
-      const response = await fetch('/api/activities', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': document
-            .querySelector('meta[name="csrf-token"]')
-            ?.getAttribute('content') || '',
-        },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      });
+      const data = await api.activities.create(payload as any);
 
-      if (!response.ok) {
-        // Try to parse as JSON, but handle HTML error pages gracefully
-        let errorMessage = 'Failed to create activity';
-        try {
-          const contentType = response.headers.get('content-type');
-          if (contentType?.includes('application/json')) {
-            const error = await response.json();
-            errorMessage = error.message || error.errors || 'Failed to create activity';
-          } else {
-            errorMessage = `Server error: ${response.status} ${response.statusText}`;
-          }
-        } catch (parseError) {
-          errorMessage = `Server error: ${response.status} ${response.statusText}`;
-        }
-        throw new Error(errorMessage);
-      }
-
-      const data = await response.json();
-
-      const newItem = data.data;
+      const newItem = data.data as any;
 
       setItems(prev => [{
         id: newItem.id,
@@ -355,23 +346,7 @@ export default function ActivitiesPage() {
   const handleStatusChange = async (id: number | string, newStatus: 'in_progress' | 'completed' | 'cancelled') => {
     try {
       const apiStatus = newStatus === 'in_progress' ? 'in_progress' : newStatus;
-      const response = await fetch(`/api/activities/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': document
-            .querySelector('meta[name="csrf-token"]')
-            ?.getAttribute('content') || '',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ status: apiStatus }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update status');
-      }
-
-      const updatedItem = await response.json();
+      await api.activities.update(Number(id), { status: apiStatus } as any);
       setItems(prev => prev.map(item => 
         item.id === id ? {
           ...item,
@@ -431,7 +406,7 @@ export default function ActivitiesPage() {
               {createDropdown && (
                 <div className="absolute right-0 mt-2 w-40 bg-white rounded-xl border border-gray-200 shadow-lg py-1.5 z-10">
                   {(['event', 'task'] as ItemType[]).map((t) => (
-                    <button key={t} onClick={() => { setCreateDropdown(false); setShowModal(true); }}
+                    <button key={t} onClick={() => { setCreateDropdown(false); setModalInitialType(t); setShowModal(true); }}
                       className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
                       {t === 'event' ? (
                         <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>
@@ -561,7 +536,7 @@ export default function ActivitiesPage() {
       </div>
 
       {/* Create Modal */}
-      {showModal && <CreateModal onClose={() => setShowModal(false)} onSave={handleSave} loading={saving} />}
+      {showModal && <CreateModal initialType={modalInitialType} onClose={() => setShowModal(false)} onSave={handleSave} loading={saving} />}
     </AppLayout>
   );
 }

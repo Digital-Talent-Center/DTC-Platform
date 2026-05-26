@@ -1,17 +1,35 @@
 import { useState, useEffect } from 'react';
 import AppLayout from "@/layouts/app-layout";
 import { Head, Link, usePage } from "@inertiajs/react";
-import { api, type ProfileExtension, type Achievement } from '@/services/api';
+import { api, type ProfileExtension, type Achievement, type Post } from '@/services/api';
 import { type SharedData } from '@/types';
 
 export default function ProfilePage() {
   const { auth } = usePage<SharedData>().props;
   const [profile, setProfile] = useState<ProfileExtension | null>(null);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [loadingAchievements, setLoadingAchievements] = useState(true);
+  const [loadingPosts, setLoadingPosts] = useState(true);
 
   const getInitials = (name?: string) =>
+    name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'AA';
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
     name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'AA';
 
   const categoryIcons: Record<string, string> = {
@@ -29,7 +47,16 @@ export default function ProfilePage() {
       .then(res => setAchievements(res.data.slice(0, 3)))
       .catch(console.error)
       .finally(() => setLoadingAchievements(false));
-  }, []);
+
+    if (auth.user?.id) {
+      api.posts.list(1, 5, { user_id: auth.user.id })
+        .then(res => setPosts(res.data))
+        .catch(console.error)
+        .finally(() => setLoadingPosts(false));
+    } else {
+      setLoadingPosts(false);
+    }
+  }, [auth.user?.id]);
 
   return (
     <AppLayout>
@@ -152,6 +179,74 @@ export default function ProfilePage() {
                   </Link>
                 ))}
               </div>
+            </div>
+
+            {/* My Posts */}
+            <div className="bg-white rounded-2xl border border-gray-100 p-6 mt-6">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2"><span className="w-1 h-5 bg-amber-500 rounded-full" />My Posts</h2>
+                <Link href={`/timeline?user=${auth.user?.id}`} className="text-xs text-amber-600 hover:text-amber-700 font-medium">View all</Link>
+              </div>
+              
+              {loadingPosts ? (
+                <div className="animate-pulse space-y-4">
+                  {[1, 2].map(i => (
+                    <div key={i} className="flex gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gray-200 flex-shrink-0" />
+                      <div className="flex-1 space-y-2 py-1">
+                        <div className="h-3 bg-gray-200 rounded w-1/4" />
+                        <div className="h-2 bg-gray-100 rounded w-3/4" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : posts.length === 0 ? (
+                <div className="text-center py-6 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                  <p className="text-sm text-gray-400">You haven't posted anything yet.</p>
+                  <Link href="/timeline" className="inline-block mt-2 text-xs font-medium text-amber-600 hover:text-amber-700">Create a post</Link>
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  {posts.map(post => (
+                    <div key={post.id} className="pb-5 border-b border-gray-50 last:border-0 last:pb-0">
+                      <div className="flex items-start gap-3 mb-2">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-xs font-bold overflow-hidden flex-shrink-0">
+                          {profile?.avatarUrl ? (
+                            <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                          ) : (
+                            getInitials(auth.user?.name)
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-semibold text-gray-900 truncate">{auth.user?.name}</p>
+                            <span className="text-xs text-gray-400 whitespace-nowrap">{formatTime(post.createdAt)}</span>
+                          </div>
+                          {post.tag && <span className="inline-block px-1.5 py-0.5 mt-0.5 text-[10px] font-medium bg-amber-50 text-amber-600 rounded">{post.tag}</span>}
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-600 line-clamp-3 mb-3">{post.content}</p>
+                      {post.imageUrl && (
+                        post.imageUrl.match(/\.(mp4|webm|ogg)$/i) ? (
+                          <video src={post.imageUrl} controls className="w-full h-40 object-cover rounded-xl border border-gray-100 mb-3" />
+                        ) : (
+                          <img src={post.imageUrl} alt="Post media" className="w-full h-40 object-cover rounded-xl border border-gray-100 mb-3" />
+                        )
+                      )}
+                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <span className="flex items-center gap-1.5">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+                          {post.likesCount}
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                          {post.commentsCount}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -91,8 +91,8 @@ export const api = {
     /**
      * Get all posts with pagination
      */
-    list: async (page = 1, perPage = 10): Promise<PaginatedResponse<Post>> => {
-      const query = buildQueryString({ page, per_page: perPage });
+    list: async (page = 1, perPage = 10, filters?: { user_id?: number }): Promise<PaginatedResponse<Post>> => {
+      const query = buildQueryString({ page, per_page: perPage, ...filters });
       return fetch(`${API_BASE}/posts${query}`, buildFetchOptions('GET'))
         .then(r => handleResponse<PaginatedResponse<Post>>(r));
     },
@@ -111,6 +111,24 @@ export const api = {
     create: async (data: { content: string; imageUrl?: string; caption?: string; tag?: string }): Promise<ApiResponse<Post>> => {
       return fetch(`${API_BASE}/posts`, buildFetchOptions('POST', data))
         .then(r => handleResponse<ApiResponse<Post>>(r));
+    },
+
+    /**
+     * Create new post with file upload
+     */
+    createWithFile: async (formData: FormData): Promise<ApiResponse<Post>> => {
+      const headers: Record<string, string> = {
+        'Accept': 'application/json',
+      };
+      const token = getCsrfToken();
+      if (token) headers['X-XSRF-TOKEN'] = token;
+
+      return fetch(`${API_BASE}/posts`, {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: formData,
+      }).then(r => handleResponse<ApiResponse<Post>>(r));
     },
 
     /**

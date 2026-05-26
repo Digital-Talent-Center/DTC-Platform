@@ -13,6 +13,7 @@ interface FormState {
   tahunAjaran: string;
   tanggalMulai: string;
   tanggalSelesai: string;
+  title: string;
   kategori: string;
   jenis: string;
   tingkat: string;
@@ -28,6 +29,7 @@ const initialForm: FormState = {
   tahunAjaran: '2023/2024',
   tanggalMulai: '',
   tanggalSelesai: '',
+  title: '',
   kategori: 'Kompetisi Ilmiah',
   jenis: '',
   tingkat: 'Internasional',
@@ -77,6 +79,29 @@ export default function SubmitAchievementPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Load profile to auto-populate NIM and Nama
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const response = await fetch('/api/profile');
+        if (response.ok) {
+          const res = await response.json();
+          const p = res.data;
+          if (p) {
+            setForm((prev) => ({
+              ...prev,
+              nim: p.nim || '',
+              namaLengkap: p.user?.name || '',
+            }));
+          }
+        }
+      } catch (err) {
+        console.error('Failed to pre-populate profile details:', err);
+      }
+    };
+    loadProfile();
+  }, []);
+
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
   ) => {
@@ -125,6 +150,7 @@ export default function SubmitAchievementPage() {
     if (!form.namaLengkap.trim()) next.namaLengkap = 'Nama wajib diisi';
     if (!form.tanggalMulai) next.tanggalMulai = 'Tanggal mulai wajib diisi';
     if (!form.tanggalSelesai) next.tanggalSelesai = 'Tanggal selesai wajib diisi';
+    if (!form.title.trim()) next.title = 'Nama prestasi wajib diisi';
     if (!form.jenis.trim()) next.jenis = 'Jenis kegiatan wajib diisi';
     if (!form.deskripsi.trim()) next.deskripsi = 'Deskripsi wajib diisi';
     if (!form.setuju) next.setuju = 'Anda harus menyetujui pernyataan';
@@ -147,25 +173,36 @@ export default function SubmitAchievementPage() {
       formData.append('tahun_ajaran', form.tahunAjaran);
       formData.append('tanggal_mulai', form.tanggalMulai);
       formData.append('tanggal_selesai', form.tanggalSelesai);
-      formData.append('title', form.jenis); // Jenis as title
+      formData.append('title', form.title);
       formData.append('description', form.deskripsi);
       formData.append('category', form.kategori);
       formData.append('jenis', form.jenis);
       formData.append('tingkat', form.tingkat);
       formData.append('keikutsertaan', form.keikutsertaan);
-      formData.append('link_sertifikat', form.linkSertifikat);
+      
+      // Only append link_sertifikat if not empty to satisfy nullable URL validation
+      if (form.linkSertifikat.trim()) {
+        formData.append('link_sertifikat', form.linkSertifikat);
+      }
       
       // Add file if present
       if (file) {
         formData.append('bukti', file);
       }
       
+      // Read CSRF token from cookie ( Sanctum XSRF ) or meta tag
+      const getCsrfToken = () => {
+        const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+        return match ? decodeURIComponent(match[1]) : '';
+      };
+      
+      const token = getCsrfToken() || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+      
       const response = await fetch('/api/achievements', {
         method: 'POST',
         headers: {
-          'X-CSRF-TOKEN': document
-            .querySelector('meta[name="csrf-token"]')
-            ?.getAttribute('content') || '',
+          'X-XSRF-TOKEN': token,
+          'X-CSRF-TOKEN': token,
         },
         credentials: 'include',
         body: formData,
@@ -356,6 +393,19 @@ export default function SubmitAchievementPage() {
                   </option>
                 ))}
               </select>
+            </Field>
+            <Field label="Nama Prestasi">
+              <input
+                type="text"
+                name="title"
+                value={form.title}
+                onChange={handleChange}
+                placeholder="contoh: Juara 1 Gemastik"
+                className={`w-full px-4 py-2.5 bg-gray-50 border rounded-lg text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition ${
+                  errors.title ? 'border-red-300' : 'border-gray-200'
+                }`}
+              />
+              {errors.title && <p className="text-[11px] text-red-500">{errors.title}</p>}
             </Field>
             <Field label="Jenis">
               <input

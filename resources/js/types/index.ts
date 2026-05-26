@@ -236,6 +236,8 @@ export interface ProfileExtension {
         twitter?: string;
         portfolio?: string;
     };
+    postsCount?: number;
+    completedTasksCount?: number;
     profileCompletedAt?: string;
     createdAt: string;
     updatedAt: string;
