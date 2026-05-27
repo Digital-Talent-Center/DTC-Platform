@@ -23,6 +23,10 @@ Route::middleware(['auth'])->group(function () {
         return Inertia::render('profile');
     })->name('profile.show');
 
+    Route::get('profile/{id}', function ($id) {
+        return Inertia::render('profile', ['userId' => $id]);
+    })->name('profile.show.user')->where('id', '[0-9]+');
+
     Route::get('profile/edit', function () {
         return Inertia::render('profile-edit');
     })->name('profile.edit');

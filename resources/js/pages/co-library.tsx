@@ -3,25 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import AppLayout from "@/layouts/app-layout";
 import { Head, Link } from "@inertiajs/react";
-
-interface Document {
-  id: number | string;
-  user_id: number;
-  title: string;
-  description: string;
-  type: string;
-  category: string;
-  competition?: string;
-  level?: string;
-  year?: number;
-  file_path: string;
-  file_icon: string;
-  tags: string[];
-  views_count: number;
-  downloads_count: number;
-  is_public: boolean;
-  created_at?: string;
-}
+import { api } from '@/services/api';
+import type { Document } from '@/types';
 
 export default function CoLibraryPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -37,18 +20,18 @@ export default function CoLibraryPage() {
     const fetchDocuments = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/documents?is_public=true');
-        if (!response.ok) throw new Error('Failed to fetch documents');
-        const data = await response.json();
+        // Using api.documents.list which handles auth headers and CSRF
+        const response = await api.documents.list();
         
-        const docs = data.data || [];
+        // PaginatedResponse has data inside data (or just data if the type is mapped)
+        const docs = Array.isArray(response.data) ? response.data : (response.data as any).data || [];
         setDocuments(docs);
 
         // Extract unique categories
         const uniqueCategories = [...new Set(docs.map((doc: Document) => doc.category))].filter(Boolean);
         setCategories(uniqueCategories as string[]);
       } catch (err: any) {
-        setError(err.message);
+        setError(err.message || 'Failed to fetch documents');
         console.error('Error fetching documents:', err);
       } finally {
         setLoading(false);
@@ -60,22 +43,21 @@ export default function CoLibraryPage() {
 
   const filtered = documents.filter(doc => {
     const matchesSearch = doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         doc.description.toLowerCase().includes(searchTerm.toLowerCase());
+                         (doc.description || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || doc.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
   const handleView = (doc: Document) => {
-    if (!doc.file_path) {
+    if (!doc.filePath) {
       alert('File belum tersedia untuk dokumen ini.');
       return;
     }
+    const fileUrl = doc.filePath;
     // Open file immediately (before any async) to avoid popup blocker
-    window.open(doc.file_path, '_blank');
-    // Increment view count in background
-    fetch(`/api/documents/${doc.id}`, {
-      credentials: 'include',
-    }).catch(err => console.error('View count error:', err));
+    window.open(fileUrl, '_blank');
+    // Increment view count in background via API
+    api.documents.get(doc.id).catch(err => console.error('View count error:', err));
   };
 
   return (
@@ -178,7 +160,7 @@ export default function CoLibraryPage() {
                       </svg>
                     </div>
                     <div className="flex items-center gap-1">
-                      {doc.is_public && (
+                      {doc.isPublic && (
                         <span className="px-2.5 py-0.5 text-[10px] font-bold tracking-wider rounded-full bg-green-100 text-green-700">
                           PUBLIC
                         </span>
@@ -193,9 +175,9 @@ export default function CoLibraryPage() {
                   {/* Tags */}
                   {doc.tags && doc.tags.length > 0 && (
                     <div className="mb-4 flex flex-wrap gap-2">
-                      {doc.tags.slice(0, 3).map((tag: string, idx: number) => (
+                      {doc.tags.slice(0, 3).map((tag: any, idx: number) => (
                         <span key={idx} className="px-2.5 py-1 text-xs bg-gray-100 text-gray-700 rounded-full">
-                          {tag}
+                          {tag.name}
                         </span>
                       ))}
                       {doc.tags.length > 3 && (
@@ -223,7 +205,7 @@ export default function CoLibraryPage() {
                         <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                         </svg>
-                        {doc.views_count || 0} views
+                        {doc.viewsCount || 0} views
                       </span>
                     </div>
                   </div>

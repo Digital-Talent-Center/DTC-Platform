@@ -34,7 +34,7 @@ class ProfileExtensionController extends Controller
      */
     public function showUser($userId)
     {
-        $profile = ProfileExtension::where('user_id', $userId)->first();
+        $profile = ProfileExtension::with('user')->where('user_id', $userId)->first();
 
         if (!$profile) {
             return $this->messageResponse('Profile not found', 404);

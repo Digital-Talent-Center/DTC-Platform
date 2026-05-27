@@ -1,4 +1,4 @@
-import { useState, useRef, ChangeEvent, FormEvent, DragEvent } from 'react';
+import { useState, useRef, useEffect, ChangeEvent, FormEvent, DragEvent } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 
@@ -190,19 +190,18 @@ export default function SubmitAchievementPage() {
         formData.append('bukti', file);
       }
       
-      // Read CSRF token from cookie ( Sanctum XSRF ) or meta tag
+      // Read CSRF token from the meta tag
       const getCsrfToken = () => {
-        const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
-        return match ? decodeURIComponent(match[1]) : '';
+        return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
       };
       
-      const token = getCsrfToken() || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+      const token = getCsrfToken();
       
       const response = await fetch('/api/achievements', {
         method: 'POST',
         headers: {
-          'X-XSRF-TOKEN': token,
           'X-CSRF-TOKEN': token,
+          'Accept': 'application/json',
         },
         credentials: 'include',
         body: formData,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Head, router } from "@inertiajs/react";
+import { Head, Link, router } from "@inertiajs/react";
 import AppLayout from "@/layouts/app-layout";
 import { Trash2, Info, ChevronDown, ClipboardList } from "lucide-react";
 
@@ -9,6 +9,7 @@ import { Trash2, Info, ChevronDown, ClipboardList } from "lucide-react";
 interface ReportItem {
     id: number;
     user: string;
+    userId: number | null;
     avatarUrl: string;
     reason: string;
     content: string;
@@ -92,14 +93,32 @@ export default function ReportListPage({ initialReports, pendingCount }: Props) 
                                     {/* Card Header: Avatar & Name */}
                                     <div className="flex items-start gap-4 mb-6">
                                         <div className="w-11 h-11 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
-                                            <img
-                                                src={report.avatarUrl}
-                                                alt={report.user}
-                                                className="w-full h-full object-cover grayscale"
-                                            />
+                                            {report.userId ? (
+                                                <Link href={`/profile/${report.userId}`}>
+                                                    <img
+                                                        src={report.avatarUrl}
+                                                        alt={report.user}
+                                                        className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all"
+                                                    />
+                                                </Link>
+                                            ) : (
+                                                <img
+                                                    src={report.avatarUrl}
+                                                    alt={report.user}
+                                                    className="w-full h-full object-cover grayscale"
+                                                />
+                                            )}
                                         </div>
                                         <div>
-                                            <h3 className="font-bold text-gray-900 text-[15px]">{report.user}</h3>
+                                            <h3 className="font-bold text-gray-900 text-[15px]">
+                                                {report.userId ? (
+                                                    <Link href={`/profile/${report.userId}`} className="hover:text-amber-600 hover:underline">
+                                                        {report.user}
+                                                    </Link>
+                                                ) : (
+                                                    report.user
+                                                )}
+                                            </h3>
                                             <div className="flex items-center gap-1 mt-0.5 text-[#C23B22]">
                                                 <Info className="w-3.5 h-3.5" />
                                                 <span className="text-[10px] font-bold uppercase tracking-wider">

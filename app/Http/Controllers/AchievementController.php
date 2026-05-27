@@ -16,7 +16,7 @@ class AchievementController extends Controller
      */
     public function index(Request $request)
     {
-        $userId = Auth::id();
+        $userId = $request->input('user_id', Auth::id());
 
         $achievements = Achievement::where('user_id', $userId)
             ->when($request->status, function ($query) use ($request) {

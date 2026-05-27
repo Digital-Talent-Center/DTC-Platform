@@ -19,6 +19,9 @@ class PostController extends Controller
         $perPage = $request->per_page ?? 10;
 
         $posts = Post::with(['user', 'comments.user', 'likes'])
+            ->when($request->user_id, function ($query) use ($request) {
+                $query->where('user_id', $request->user_id);
+            })
             ->orderByDesc('created_at')
             ->paginate($perPage);
 

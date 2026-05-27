@@ -209,7 +209,7 @@ export const api = {
     /**
      * Get all achievements for current user
      */
-    list: async (filters?: { status?: string; category?: string; page?: number }): Promise<PaginatedResponse<Achievement>> => {
+    list: async (filters?: { status?: string; category?: string; page?: number; user_id?: string | number }): Promise<PaginatedResponse<Achievement>> => {
       const query = buildQueryString(filters);
       return fetch(`${API_BASE}/achievements${query}`, buildFetchOptions('GET'))
         .then(r => handleResponse<PaginatedResponse<Achievement>>(r));

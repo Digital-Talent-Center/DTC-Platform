@@ -4,8 +4,11 @@ import { Head, Link, usePage } from "@inertiajs/react";
 import { api, type ProfileExtension, type Achievement, type Post } from '@/services/api';
 import { type SharedData } from '@/types';
 
-export default function ProfilePage() {
+export default function ProfilePage({ userId }: { userId?: string | number }) {
   const { auth } = usePage<SharedData>().props;
+  const isOwnProfile = !userId || String(userId) === String(auth.user?.id);
+  const targetUserId = isOwnProfile ? auth.user?.id : userId;
+
   const [profile, setProfile] = useState<ProfileExtension | null>(null);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -30,7 +33,6 @@ export default function ProfilePage() {
     if (diffDays < 7) return `${diffDays}d ago`;
     return date.toLocaleDateString();
   };
-    name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'AA';
 
   const categoryIcons: Record<string, string> = {
     competition: '🏆', certification: '📜', publication: '📖',
@@ -38,25 +40,35 @@ export default function ProfilePage() {
   };
 
   useEffect(() => {
-    api.profile.get()
-      .then(res => setProfile(res.data))
-      .catch(console.error)
-      .finally(() => setLoadingProfile(false));
+    if (isOwnProfile) {
+      api.profile.get()
+        .then(res => setProfile(res.data))
+        .catch(console.error)
+        .finally(() => setLoadingProfile(false));
+    } else if (targetUserId) {
+      api.profile.getUser(Number(targetUserId))
+        .then(res => setProfile(res.data))
+        .catch(console.error)
+        .finally(() => setLoadingProfile(false));
+    } else {
+      setLoadingProfile(false);
+    }
 
-    api.achievements.list({ status: 'approved' })
-      .then(res => setAchievements(res.data.slice(0, 3)))
-      .catch(console.error)
-      .finally(() => setLoadingAchievements(false));
+    if (targetUserId) {
+      api.achievements.list({ status: 'approved', user_id: targetUserId })
+        .then(res => setAchievements(res.data.slice(0, 3)))
+        .catch(console.error)
+        .finally(() => setLoadingAchievements(false));
 
-    if (auth.user?.id) {
-      api.posts.list(1, 5, { user_id: auth.user.id })
+      api.posts.list(1, 5, { user_id: targetUserId as number })
         .then(res => setPosts(res.data))
         .catch(console.error)
         .finally(() => setLoadingPosts(false));
     } else {
+      setLoadingAchievements(false);
       setLoadingPosts(false);
     }
-  }, [auth.user?.id]);
+  }, [targetUserId, isOwnProfile]);
 
   return (
     <AppLayout>
@@ -75,7 +87,7 @@ export default function ProfilePage() {
                 {profile?.avatarUrl ? (
                   <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
-                  getInitials(auth.user?.name)
+                  getInitials(profile?.user?.name || (isOwnProfile ? auth.user?.name : 'User'))
                 )}
               </div>
               <div className="flex-1 pb-1">
@@ -86,20 +98,22 @@ export default function ProfilePage() {
                   </div>
                 ) : (
                   <>
-                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{auth.user?.name || 'User'}</h1>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{profile?.user?.name || (isOwnProfile ? auth.user?.name : 'User')}</h1>
                     <span className="inline-block mt-1.5 text-base font-semibold text-amber-600 capitalize">{profile?.role || 'Student'}</span>
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mt-3 text-sm text-gray-500">
-                      {auth.user?.email && <span>{auth.user.email}</span>}
+                      {(profile?.user?.email || (isOwnProfile ? auth.user?.email : null)) && <span>{profile?.user?.email || auth.user?.email}</span>}
                       {profile?.nim && <><span className="hidden sm:inline text-gray-300">•</span><span>NIM: {profile.nim}</span></>}
                       {profile?.faculty && <><span className="hidden sm:inline text-gray-300">•</span><span>{profile.faculty}</span></>}
                     </div>
                   </>
                 )}
               </div>
-              <Link href="/profile/edit" className="self-start sm:self-end inline-flex items-center gap-2 px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold rounded-full shadow-sm transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
-                Edit Profile
-              </Link>
+              {isOwnProfile && (
+                <Link href="/profile/edit" className="self-start sm:self-end inline-flex items-center gap-2 px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold rounded-full shadow-sm transition-all">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
+                  Edit Profile
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -136,7 +150,7 @@ export default function ProfilePage() {
             <div className="bg-white rounded-2xl border border-gray-100 p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2"><span className="w-1 h-5 bg-amber-500 rounded-full" />Achievements</h2>
-                <Link href="/dashboard/achievements" className="text-xs text-amber-600 hover:text-amber-700 font-medium">View all</Link>
+                {isOwnProfile && <Link href="/dashboard/achievements" className="text-xs text-amber-600 hover:text-amber-700 font-medium">View all</Link>}
               </div>
               {loadingAchievements ? (
                 <div className="animate-pulse space-y-3">
@@ -162,30 +176,32 @@ export default function ProfilePage() {
 
           {/* Quick Actions */}
           <div className="lg:col-span-3">
-            <div className="bg-white rounded-2xl border border-gray-100 p-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-5 flex items-center gap-2"><span className="w-1 h-5 bg-amber-500 rounded-full" />Quick Actions</h2>
-              <div className="grid grid-cols-2 gap-4">
-                {[
-                  { label: 'Submit Achievement', href: '/dashboard/achievements/new', icon: '🏆', color: 'bg-amber-50 border-amber-100 hover:border-amber-200' },
-                  { label: 'My Activities', href: '/dashboard/activities', icon: '📅', color: 'bg-purple-50 border-purple-100 hover:border-purple-200' },
-                  { label: 'Co-Library', href: '/dashboard/co-library', icon: '📚', color: 'bg-pink-50 border-pink-100 hover:border-pink-200' },
-                  { label: 'Co-Guide', href: '/dashboard/co-guide', icon: '📖', color: 'bg-blue-50 border-blue-100 hover:border-blue-200' },
-                  { label: 'Timeline', href: '/timeline', icon: '✨', color: 'bg-green-50 border-green-100 hover:border-green-200' },
-                  { label: 'Notifications', href: '/notifications', icon: '🔔', color: 'bg-orange-50 border-orange-100 hover:border-orange-200' },
-                ].map(item => (
-                  <Link key={item.label} href={item.href} className={`${item.color} rounded-xl border p-4 flex flex-col items-start gap-2 hover:shadow-sm transition-all`}>
-                    <span className="text-2xl">{item.icon}</span>
-                    <span className="text-xs font-semibold text-gray-700">{item.label}</span>
-                  </Link>
-                ))}
+            {isOwnProfile && (
+              <div className="bg-white rounded-2xl border border-gray-100 p-6">
+                <h2 className="text-lg font-bold text-gray-900 mb-5 flex items-center gap-2"><span className="w-1 h-5 bg-amber-500 rounded-full" />Quick Actions</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  {[
+                    { label: 'Submit Achievement', href: '/dashboard/achievements/new', icon: '🏆', color: 'bg-amber-50 border-amber-100 hover:border-amber-200' },
+                    { label: 'My Activities', href: '/dashboard/activities', icon: '📅', color: 'bg-purple-50 border-purple-100 hover:border-purple-200' },
+                    { label: 'Co-Library', href: '/dashboard/co-library', icon: '📚', color: 'bg-pink-50 border-pink-100 hover:border-pink-200' },
+                    { label: 'Co-Guide', href: '/dashboard/co-guide', icon: '📖', color: 'bg-blue-50 border-blue-100 hover:border-blue-200' },
+                    { label: 'Timeline', href: '/timeline', icon: '✨', color: 'bg-green-50 border-green-100 hover:border-green-200' },
+                    { label: 'Notifications', href: '/notifications', icon: '🔔', color: 'bg-orange-50 border-orange-100 hover:border-orange-200' },
+                  ].map(item => (
+                    <Link key={item.label} href={item.href} className={`${item.color} rounded-xl border p-4 flex flex-col items-start gap-2 hover:shadow-sm transition-all`}>
+                      <span className="text-2xl">{item.icon}</span>
+                      <span className="text-xs font-semibold text-gray-700">{item.label}</span>
+                    </Link>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* My Posts */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-6 mt-6">
+            <div className={`bg-white rounded-2xl border border-gray-100 p-6 ${isOwnProfile ? 'mt-6' : ''}`}>
               <div className="flex items-center justify-between mb-5">
-                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2"><span className="w-1 h-5 bg-amber-500 rounded-full" />My Posts</h2>
-                <Link href={`/timeline?user=${auth.user?.id}`} className="text-xs text-amber-600 hover:text-amber-700 font-medium">View all</Link>
+                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2"><span className="w-1 h-5 bg-amber-500 rounded-full" />{isOwnProfile ? 'My Posts' : 'Posts'}</h2>
+                <Link href={`/timeline?user=${targetUserId}`} className="text-xs text-amber-600 hover:text-amber-700 font-medium">View all</Link>
               </div>
               
               {loadingPosts ? (
@@ -202,8 +218,8 @@ export default function ProfilePage() {
                 </div>
               ) : posts.length === 0 ? (
                 <div className="text-center py-6 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                  <p className="text-sm text-gray-400">You haven't posted anything yet.</p>
-                  <Link href="/timeline" className="inline-block mt-2 text-xs font-medium text-amber-600 hover:text-amber-700">Create a post</Link>
+                  <p className="text-sm text-gray-400">{isOwnProfile ? "You haven't posted anything yet." : "No posts yet."}</p>
+                  {isOwnProfile && <Link href="/timeline" className="inline-block mt-2 text-xs font-medium text-amber-600 hover:text-amber-700">Create a post</Link>}
                 </div>
               ) : (
                 <div className="space-y-5">
@@ -219,7 +235,7 @@ export default function ProfilePage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
-                            <p className="text-sm font-semibold text-gray-900 truncate">{auth.user?.name}</p>
+                            <p className="text-sm font-semibold text-gray-900 truncate">{post.user?.name || profile?.user?.name || auth.user?.name}</p>
                             <span className="text-xs text-gray-400 whitespace-nowrap">{formatTime(post.createdAt)}</span>
                           </div>
                           {post.tag && <span className="inline-block px-1.5 py-0.5 mt-0.5 text-[10px] font-medium bg-amber-50 text-amber-600 rounded">{post.tag}</span>}

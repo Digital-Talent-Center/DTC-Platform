@@ -130,6 +130,12 @@ export default function TimelineIndex() {
     loadData();
   }, []);
 
+  const getProfileUrl = (id?: number) => {
+    if (!id) return '#';
+    const myId = profile?.userId || profile?.user?.id;
+    return myId === id ? '/profile' : `/profile/${id}`;
+  };
+
   const toggleLike = async (postId: number) => {
     try {
       await api.posts.like(postId);
@@ -510,12 +516,12 @@ export default function TimelineIndex() {
                 <div className="p-5">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-xs font-bold overflow-hidden flex-shrink-0">
+                      <Link href={getProfileUrl(post.userId || post.user?.id)} className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-xs font-bold overflow-hidden flex-shrink-0 hover:ring-2 hover:ring-amber-300 transition-all">
                         {(post.user?.profileExtension?.avatarUrl || (post.user as any)?.profile_extension?.avatar_url) ? <img src={post.user?.profileExtension?.avatarUrl || (post.user as any)?.profile_extension?.avatar_url} alt="Avatar" className="w-full h-full object-cover" /> : getInitials(post.user?.name || 'AA')}
-                      </div>
+                      </Link>
                       <div>
                         <div className="flex items-center gap-1.5">
-                          <p className="text-sm font-semibold text-gray-900">{post.user?.name || 'Anonymous'}</p>
+                          <Link href={getProfileUrl(post.userId || post.user?.id)} className="text-sm font-semibold text-gray-900 hover:text-amber-600 hover:underline">{post.user?.name || 'Anonymous'}</Link>
                           {post.tag && (
                             <span className="px-1.5 py-0.5 text-[9px] font-bold bg-amber-100 text-amber-700 rounded-md capitalize">
                               {post.tag}
@@ -658,12 +664,12 @@ export default function TimelineIndex() {
                       <div className="px-5 py-3 space-y-3 max-h-64 overflow-y-auto border-b border-gray-50">
                         {post.comments.map((c) => (
                           <div key={c.id} className="flex items-start gap-2.5">
-                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0 overflow-hidden">
+                            <Link href={getProfileUrl(c.userId || c.user?.id)} className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0 overflow-hidden hover:ring-2 hover:ring-gray-300 transition-all">
                               {(c.user?.profileExtension?.avatarUrl || (c.user as any)?.profile_extension?.avatar_url) ? <img src={c.user?.profileExtension?.avatarUrl || (c.user as any)?.profile_extension?.avatar_url} alt="Avatar" className="w-full h-full object-cover" /> : getInitials(c.user?.name || 'AA')}
-                            </div>
+                            </Link>
                             <div className="bg-gray-50 rounded-xl px-3 py-2 flex-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <p className="text-xs font-semibold text-gray-900">{c.user?.name || 'Anonymous'}</p>
+                                <Link href={getProfileUrl(c.userId || c.user?.id)} className="text-xs font-semibold text-gray-900 hover:text-amber-600 hover:underline">{c.user?.name || 'Anonymous'}</Link>
                                 <span className="text-[10px] text-gray-400">{formatTime(c.createdAt || (c as any).created_at)}</span>
                               </div>
                               <p className="text-xs text-gray-600 mt-0.5">{c.content}</p>
