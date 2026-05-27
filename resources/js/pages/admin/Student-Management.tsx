@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import AppLayout from '@/layouts/app-layout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 
 interface Student {
     id: number;
@@ -23,6 +23,12 @@ export default function StudentManagement({ students: initialStudents }: Props) 
     const itemsPerPage = 10;
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [studentToDelete, setStudentToDelete] = useState<number | null>(null);
+    const [createModalOpen, setCreateModalOpen] = useState(false);
+    const [createForm, setCreateForm] = useState({ name: '', email: '', password: '', password_confirmation: '', nim: '', major: '' });
+    const [createErrors, setCreateErrors] = useState<Record<string, string>>({});
+    const [creating, setCreating] = useState(false);
+
+    useEffect(() => { setStudents(initialStudents); }, [initialStudents]);
 
     // Derived state
     const filteredAndSortedStudents = useMemo(() => {
@@ -74,16 +80,32 @@ export default function StudentManagement({ students: initialStudents }: Props) 
     };
 
     const handleDelete = () => {
-        if (studentToDelete !== null) {
-            setStudents(prev => prev.filter(s => s.id !== studentToDelete));
-            setDeleteModalOpen(false);
-            setStudentToDelete(null);
+        if (studentToDelete === null) return;
+        router.delete(route('admin.students.destroy', studentToDelete), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setStudents(prev => prev.filter(s => s.id !== studentToDelete));
+                if (paginatedStudents.length === 1 && currentPage > 1) {
+                    setCurrentPage(prev => prev - 1);
+                }
+                setDeleteModalOpen(false);
+                setStudentToDelete(null);
+            },
+        });
+    };
 
-            // Adjust current page if we deleted the last item on current page
-            if (paginatedStudents.length === 1 && currentPage > 1) {
-                setCurrentPage(prev => prev - 1);
-            }
-        }
+    const handleCreate = () => {
+        setCreating(true);
+        router.post(route('admin.students.store'), createForm, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setCreateModalOpen(false);
+                setCreateForm({ name: '', email: '', password: '', password_confirmation: '', nim: '', major: '' });
+                setCreateErrors({});
+            },
+            onError: (errors) => setCreateErrors(errors),
+            onFinish: () => setCreating(false),
+        });
     };
 
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,7 +133,7 @@ export default function StudentManagement({ students: initialStudents }: Props) 
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
                     <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight">Manajemen Mahasiswa</h1>
 
-                    <button className="bg-[#7b5b00] hover:bg-[#634900] text-white font-semibold py-2.5 px-6 rounded-full flex items-center gap-2 transition-colors cursor-pointer shadow-sm">
+                    <button onClick={() => setCreateModalOpen(true)} className="bg-[#7b5b00] hover:bg-[#634900] text-white font-semibold py-2.5 px-6 rounded-full flex items-center gap-2 transition-colors cursor-pointer shadow-sm">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                             <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
                         </svg>
@@ -303,6 +325,113 @@ export default function StudentManagement({ students: initialStudents }: Props) 
                 </div>
 
             </div>
+
+            {/* Create Student Modal */}
+            {createModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-gray-900/40 backdrop-blur-sm">
+                    <div className="bg-white rounded-3xl max-w-[34rem] w-full shadow-xl overflow-hidden">
+                        {/* Modal Header */}
+                        <div className="bg-[#7b5b00] px-6 py-4">
+                            <h3 className="text-lg font-bold text-white tracking-tight">Tambah Mahasiswa Baru</h3>
+                        </div>
+                        {/* Modal Body */}
+                        <div className="p-6 grid grid-cols-2 gap-4">
+                            {/* Nama */}
+                            <div className="flex flex-col gap-1">
+                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Nama Lengkap</label>
+                                <input
+                                    type="text"
+                                    value={createForm.name}
+                                    onChange={e => setCreateForm(f => ({ ...f, name: e.target.value }))}
+                                    className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                    placeholder="Nama lengkap"
+                                />
+                                {createErrors.name && <p className="text-xs text-red-500">{createErrors.name}</p>}
+                            </div>
+                            {/* NIM */}
+                            <div className="flex flex-col gap-1">
+                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">NIM</label>
+                                <input
+                                    type="text"
+                                    value={createForm.nim}
+                                    onChange={e => setCreateForm(f => ({ ...f, nim: e.target.value }))}
+                                    className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                    placeholder="NIM mahasiswa"
+                                />
+                                {createErrors.nim && <p className="text-xs text-red-500">{createErrors.nim}</p>}
+                            </div>
+                            {/* Email */}
+                            <div className="flex flex-col gap-1">
+                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Email</label>
+                                <input
+                                    type="email"
+                                    value={createForm.email}
+                                    onChange={e => setCreateForm(f => ({ ...f, email: e.target.value }))}
+                                    className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                    placeholder="email@example.com"
+                                />
+                                {createErrors.email && <p className="text-xs text-red-500">{createErrors.email}</p>}
+                            </div>
+                            {/* Major */}
+                            <div className="flex flex-col gap-1">
+                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Jurusan</label>
+                                <input
+                                    type="text"
+                                    value={createForm.major}
+                                    onChange={e => setCreateForm(f => ({ ...f, major: e.target.value }))}
+                                    className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                    placeholder="Program studi"
+                                />
+                                {createErrors.major && <p className="text-xs text-red-500">{createErrors.major}</p>}
+                            </div>
+                            {/* Password */}
+                            <div className="flex flex-col gap-1">
+                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Password</label>
+                                <input
+                                    type="password"
+                                    value={createForm.password}
+                                    onChange={e => setCreateForm(f => ({ ...f, password: e.target.value }))}
+                                    className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                    placeholder="Min. 8 karakter"
+                                />
+                                {createErrors.password && <p className="text-xs text-red-500">{createErrors.password}</p>}
+                            </div>
+                            {/* Confirm Password */}
+                            <div className="flex flex-col gap-1">
+                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Konfirmasi Password</label>
+                                <input
+                                    type="password"
+                                    value={createForm.password_confirmation}
+                                    onChange={e => setCreateForm(f => ({ ...f, password_confirmation: e.target.value }))}
+                                    className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                    placeholder="Ulangi password"
+                                />
+                            </div>
+                        </div>
+                        {/* Modal Footer */}
+                        <div className="px-6 pb-6 flex justify-end gap-3 border-t border-gray-100 pt-4">
+                            <button
+                                onClick={() => {
+                                    setCreateModalOpen(false);
+                                    setCreateForm({ name: '', email: '', password: '', password_confirmation: '', nim: '', major: '' });
+                                    setCreateErrors({});
+                                }}
+                                className="px-5 py-2.5 rounded-xl font-bold text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                onClick={handleCreate}
+                                disabled={creating}
+                                className="px-5 py-2.5 rounded-xl font-bold text-white bg-[#7b5b00] hover:bg-[#634900] transition-colors cursor-pointer text-sm disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+                            >
+                                {creating && <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                                Buat Akun
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Delete Confirmation Modal */}
             {deleteModalOpen && (

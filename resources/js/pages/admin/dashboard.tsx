@@ -59,9 +59,29 @@ function StatusBadge({ status }: { status: string }) {
 
 /* ─── Main Page ─── */
 export default function AdminDashboardPage({ totalStudents, totalApprovedAchievements, totalActiveReports, recentUsers, recentAchievements, recentReports }: DashboardProps) {
+    const [users, setUsers] = useState<UserData[]>(recentUsers || []);
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [userToDelete, setUserToDelete] = useState<number | null>(null);
     const [achievements, setAchievements] = useState<AchievementData[]>(recentAchievements || []);
     const [reports, setReports] = useState<ReportData[]>(recentReports || []);
     const [loadingAchievementId, setLoadingAchievementId] = useState<number | null>(null);
+
+    function confirmDeleteUser(id: number) {
+        setUserToDelete(id);
+        setDeleteModalOpen(true);
+    }
+
+    function handleDeleteUser() {
+        if (userToDelete === null) return;
+        router.delete(route('admin.students.destroy', userToDelete), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setUsers(prev => prev.filter(u => u.id !== userToDelete));
+                setDeleteModalOpen(false);
+                setUserToDelete(null);
+            },
+        });
+    }
 
     function handleApprove(id: number) {
         if (loadingAchievementId !== null) return;
@@ -117,18 +137,18 @@ export default function AdminDashboardPage({ totalStudents, totalApprovedAchieve
                     <div className="px-6 py-5 border-b border-gray-100">
                         <h2 className="text-lg font-bold text-gray-900">Manajemen Pengguna</h2>
                     </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
+                    <div className="overflow-x-auto min-h-[220px]">
+                        <table className="w-full text-sm table-fixed">
                             <thead>
                                 <tr className="bg-amber-500">
-                                    <th className="text-left px-6 py-3 text-white font-semibold text-xs uppercase tracking-wider">Nama</th>
-                                    <th className="text-left px-6 py-3 text-white font-semibold text-xs uppercase tracking-wider">NIM / ID</th>
-                                    <th className="text-left px-6 py-3 text-white font-semibold text-xs uppercase tracking-wider">Status</th>
-                                    <th className="text-left px-6 py-3 text-white font-semibold text-xs uppercase tracking-wider">Aksi</th>
+                                    <th className="w-1/4 text-left px-6 py-3 text-white font-semibold text-xs uppercase tracking-wider">Nama</th>
+                                    <th className="w-1/4 text-left px-6 py-3 text-white font-semibold text-xs uppercase tracking-wider">NIM / ID</th>
+                                    <th className="w-1/4 text-left px-6 py-3 text-white font-semibold text-xs uppercase tracking-wider">Status</th>
+                                    <th className="w-1/4 text-left px-6 py-3 text-white font-semibold text-xs uppercase tracking-wider">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
-                                {recentUsers && recentUsers.length > 0 ? recentUsers.map((user) => (
+                                {users.length > 0 ? users.map((user) => (
                                     <tr key={user.id} className="hover:bg-gray-50 transition-colors">
                                         <td className="px-6 py-4">
                                             <p className="font-medium text-gray-900">{user.name}</p>
@@ -141,10 +161,7 @@ export default function AdminDashboardPage({ totalStudents, totalApprovedAchieve
                                                 <button className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Lihat">
                                                     <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                                                 </button>
-                                                <button className="p-1.5 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-colors" title="Edit">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
-                                                </button>
-                                                <button className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Hapus">
+                                                <button onClick={() => confirmDeleteUser(user.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Hapus">
                                                     <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
                                                 </button>
                                             </div>
@@ -166,6 +183,37 @@ export default function AdminDashboardPage({ totalStudents, totalApprovedAchieve
                     </div>
                 </section>
 
+                {/* ── Delete User Confirmation Modal ── */}
+                {deleteModalOpen && (
+                    <div className="fixed inset-0 z-[100] bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+                        <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 flex flex-col gap-5 animate-in zoom-in duration-200">
+                            <div className="flex flex-col items-center gap-3 text-center">
+                                <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-bold text-gray-900">Hapus Pengguna</h3>
+                                    <p className="text-sm text-gray-500 mt-1">Apakah Anda yakin ingin menghapus pengguna ini? Semua data terkait akan ikut terhapus dan tidak dapat dikembalikan.</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => { setDeleteModalOpen(false); setUserToDelete(null); }}
+                                    className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    onClick={handleDeleteUser}
+                                    className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors"
+                                >
+                                    Ya, Hapus Data
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* ── Activity Management ── */}
                 <section className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                     <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
@@ -177,6 +225,7 @@ export default function AdminDashboardPage({ totalStudents, totalApprovedAchieve
                         )}
                     </div>
                     <div className="p-6">
+                        <div className="min-h-[220px] flex flex-col justify-center">
                         {reports.length === 0 ? (
                             <div className="text-center py-12 text-gray-400">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 mx-auto mb-3 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -217,6 +266,7 @@ export default function AdminDashboardPage({ totalStudents, totalApprovedAchieve
                                 ))}
                             </div>
                         )}
+                        </div>
                         <div className="mt-5 flex justify-center">
                             <Link href="/admin/activities" className="text-sm text-gray-500 hover:text-amber-600 font-medium flex items-center gap-1.5 transition-colors">
                                 Lihat Semua Laporan
@@ -235,6 +285,7 @@ export default function AdminDashboardPage({ totalStudents, totalApprovedAchieve
                         )}
                     </div>
                     <div className="p-6">
+                        <div className="min-h-[220px] flex flex-col justify-center">
                         {achievements.length === 0 ? (
                             <div className="text-center py-12 text-gray-400">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 mx-auto mb-3 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -275,6 +326,7 @@ export default function AdminDashboardPage({ totalStudents, totalApprovedAchieve
                                 ))}
                             </div>
                         )}
+                        </div>
                         <div className="mt-5 flex justify-center">
                             <Link href="/admin/achievements" className="text-sm text-gray-500 hover:text-amber-600 font-medium flex items-center gap-1.5 transition-colors">
                                 Lihat Semua Permintaan

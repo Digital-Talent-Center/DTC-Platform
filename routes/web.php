@@ -74,6 +74,8 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('/admin/achievements/{achievement}/status', [AchievementController::class, 'updateStatus'])->name('admin.achievements.updateStatus');
 
         Route::get('/admin/students', [UsersController::class, 'index'])->name('admin.students');
+        Route::post('/admin/students', [UsersController::class, 'store'])->name('admin.students.store');
+        Route::delete('/admin/students/{id}', [UsersController::class, 'destroy'])->name('admin.students.destroy');
     });
 });
 

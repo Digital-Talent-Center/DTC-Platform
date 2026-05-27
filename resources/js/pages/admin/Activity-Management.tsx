@@ -64,7 +64,7 @@ export default function ReportListPage({ initialReports, pendingCount }: Props) 
         <AppLayout>
             <Head title="Manajemen Aktivitas" />
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+            <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex-1 flex flex-col">
 
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">
@@ -76,6 +76,7 @@ export default function ReportListPage({ initialReports, pendingCount }: Props) 
                 </div>
 
                 {/* Report Grid */}
+                <div className="flex-1">
                 {reports.length === 0 ? (
                     <div className="text-center py-20 bg-white rounded-2xl border border-gray-100 shadow-sm">
                         <p className="text-gray-500 font-medium">Tidak ada laporan aktivitas yang pending.</p>
@@ -146,6 +147,7 @@ export default function ReportListPage({ initialReports, pendingCount }: Props) 
                         )}
                     </>
                 )}
+                </div>
 
             </div>
         </AppLayout>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Head, router } from '@inertiajs/react';
+import { ClipboardList } from 'lucide-react';
 
 interface AchievementData {
     id: number;
@@ -57,32 +58,31 @@ export default function AchievementManagement({ initialAchievements, initialPend
         <AppLayout>
             <Head title="Manajemen Pencapaian" />
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 min-h-screen">
+            <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex-1 flex flex-col">
 
                 {/* Header Section */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">
                     <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight">Manajemen Pencapaian</h1>
-
-                    {/* Badges */}
-                    <div className="flex items-center gap-3 mt-4 sm:mt-0">
-                        <div className="bg-gray-200/80 px-4 py-2 rounded-full flex items-center gap-2">
-                            <div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
+                    <div className="flex items-center gap-3">
+                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-200/60 rounded-xl">
+                            <ClipboardList className="w-4 h-4 text-amber-600" />
                             <span className="text-sm font-bold text-gray-700">{pendingCount} Pending</span>
                         </div>
-                        <div className="bg-gray-200/80 px-4 py-2 rounded-full flex items-center gap-2">
-                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-600"></div>
+                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-200/60 rounded-xl">
+                            <ClipboardList className="w-4 h-4 text-emerald-600" />
                             <span className="text-sm font-bold text-gray-700">{approvedCount} Approved</span>
                         </div>
                     </div>
                 </div>
 
                 {/* Grid Section */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="flex-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {achievements.map((achievement) => (
-                        <div key={achievement.id} className="bg-white rounded-3xl p-6 shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100 flex flex-col">
+                        <div key={achievement.id} className="bg-white rounded-2xl p-4 shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100 flex flex-col">
 
                             {/* Icon Trophy */}
-                            <div className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center mb-5 shadow-sm">
+                            <div className="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center mb-4 shadow-sm">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-indigo-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 3v5.25a4.5 4.5 0 01-9 0V3M12 16.5v5.25m-3 0h6M5.25 4.5h13.5c.828 0 1.5.672 1.5 1.5v3.75a6.75 6.75 0 01-13.5 0V6c0-.828.672-1.5 1.5-1.5z" />
                                 </svg>
@@ -133,13 +133,13 @@ export default function AchievementManagement({ initialAchievements, initialPend
                     ))}
                 </div>
 
-                {/* Empty State (Optional) */}
+                {/* Empty State */}
                 {achievements.length === 0 && (
                     <div className="text-center py-20">
                         <p className="text-gray-500 text-lg font-medium">Semua pencapaian telah diproses.</p>
                     </div>
                 )}
-
+                </div>
 
             </div>
         </AppLayout>
