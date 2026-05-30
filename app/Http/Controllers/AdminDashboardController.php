@@ -31,6 +31,8 @@ class AdminDashboardController extends Controller
             return [
                 'id'    => $user->id,
                 'name'  => $user->name,
+                'email' => $user->email,
+                'role'  => $user->role,
                 'major' => $user->profileExtension?->major ?? 'N/A',
                 'nim'   => $user->profileExtension?->nim ?? 'N/A',
                 'status' => 'ACTIVE',

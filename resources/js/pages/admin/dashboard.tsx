@@ -6,10 +6,14 @@ import AppLayout from "@/layouts/app-layout";
 interface UserData {
     id: number;
     name: string;
+    email: string;
+    role: string;
     major: string;
     nim: string;
     status: string;
 }
+
+const ROLE_OPTIONS = ['student', 'admin'];
 
 interface AchievementData {
     id: number;
@@ -57,6 +61,14 @@ function StatusBadge({ status }: { status: string }) {
     );
 }
 
+function RoleBadge({ role }: { role: string }) {
+    return (
+        <span className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold tracking-wide capitalize ${role === "admin" ? "bg-[#fde68a] text-[#7b5b00]" : "bg-gray-100 text-gray-700"}`}>
+            {role}
+        </span>
+    );
+}
+
 /* ─── Main Page ─── */
 export default function AdminDashboardPage({ totalStudents, totalApprovedAchievements, totalActiveReports, recentUsers, recentAchievements, recentReports }: DashboardProps) {
     const [users, setUsers] = useState<UserData[]>(recentUsers || []);
@@ -66,9 +78,59 @@ export default function AdminDashboardPage({ totalStudents, totalApprovedAchieve
     const [reports, setReports] = useState<ReportData[]>(recentReports || []);
     const [loadingAchievementId, setLoadingAchievementId] = useState<number | null>(null);
 
+    const emptyEditForm = { name: '', email: '', password: '', password_confirmation: '', nim: '', major: '', role: 'student' };
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [editingId, setEditingId] = useState<number | null>(null);
+    const [editForm, setEditForm] = useState(emptyEditForm);
+    const [editErrors, setEditErrors] = useState<Record<string, string>>({});
+    const [saving, setSaving] = useState(false);
+
     function confirmDeleteUser(id: number) {
         setUserToDelete(id);
         setDeleteModalOpen(true);
+    }
+
+    function openEditUser(user: UserData) {
+        setEditingId(user.id);
+        setEditForm({
+            name: user.name,
+            email: user.email,
+            password: '',
+            password_confirmation: '',
+            nim: user.nim === 'N/A' ? '' : user.nim,
+            major: user.major === 'N/A' ? '' : user.major,
+            role: user.role,
+        });
+        setEditErrors({});
+        setEditModalOpen(true);
+    }
+
+    function closeEditModal() {
+        setEditModalOpen(false);
+        setEditingId(null);
+        setEditForm(emptyEditForm);
+        setEditErrors({});
+    }
+
+    function handleUpdateUser() {
+        if (editingId === null) return;
+        setSaving(true);
+        router.put(route('admin.students.update', editingId), editForm, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setUsers(prev => {
+                    if (editForm.role === 'admin') {
+                        return prev.filter(u => u.id !== editingId);
+                    }
+                    return prev.map(u => u.id === editingId
+                        ? { ...u, name: editForm.name, email: editForm.email, role: editForm.role, nim: editForm.nim || 'N/A', major: editForm.major || 'N/A' }
+                        : u);
+                });
+                closeEditModal();
+            },
+            onError: (errors) => setEditErrors(errors),
+            onFinish: () => setSaving(false),
+        });
     }
 
     function handleDeleteUser() {
@@ -141,10 +203,11 @@ export default function AdminDashboardPage({ totalStudents, totalApprovedAchieve
                         <table className="w-full text-sm table-fixed">
                             <thead>
                                 <tr className="bg-amber-500">
-                                    <th className="w-1/4 text-left px-6 py-3 text-white font-semibold text-xs uppercase tracking-wider">Nama</th>
-                                    <th className="w-1/4 text-left px-6 py-3 text-white font-semibold text-xs uppercase tracking-wider">NIM / ID</th>
-                                    <th className="w-1/4 text-left px-6 py-3 text-white font-semibold text-xs uppercase tracking-wider">Status</th>
-                                    <th className="w-1/4 text-left px-6 py-3 text-white font-semibold text-xs uppercase tracking-wider">Aksi</th>
+                                    <th className="w-[28%] text-left px-6 py-3 text-white font-semibold text-xs uppercase tracking-wider">Nama</th>
+                                    <th className="w-[22%] text-left px-6 py-3 text-white font-semibold text-xs uppercase tracking-wider">NIM / ID</th>
+                                    <th className="w-[16%] text-left px-6 py-3 text-white font-semibold text-xs uppercase tracking-wider">Role</th>
+                                    <th className="w-[16%] text-left px-6 py-3 text-white font-semibold text-xs uppercase tracking-wider">Status</th>
+                                    <th className="w-[18%] text-left px-6 py-3 text-white font-semibold text-xs uppercase tracking-wider">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
@@ -155,11 +218,15 @@ export default function AdminDashboardPage({ totalStudents, totalApprovedAchieve
                                             <p className="text-xs text-gray-400 mt-0.5">{user.major}</p>
                                         </td>
                                         <td className="px-6 py-4 text-gray-500 font-mono text-xs">{user.nim}</td>
+                                        <td className="px-6 py-4"><RoleBadge role={user.role} /></td>
                                         <td className="px-6 py-4"><StatusBadge status={user.status} /></td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
-                                                <button className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Lihat">
+                                                <button onClick={() => router.visit(route('profile.show.user', user.id))} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Lihat">
                                                     <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                                </button>
+                                                <button onClick={() => openEditUser(user)} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Edit">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" /></svg>
                                                 </button>
                                                 <button onClick={() => confirmDeleteUser(user.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Hapus">
                                                     <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
@@ -169,7 +236,7 @@ export default function AdminDashboardPage({ totalStudents, totalApprovedAchieve
                                     </tr>
                                 )) : (
                                     <tr>
-                                        <td colSpan={4} className="px-6 py-8 text-center text-gray-500 font-medium">Tidak ada data pengguna</td>
+                                        <td colSpan={5} className="px-6 py-8 text-center text-gray-500 font-medium">Tidak ada data pengguna</td>
                                     </tr>
                                 )}
                             </tbody>
@@ -208,6 +275,126 @@ export default function AdminDashboardPage({ totalStudents, totalApprovedAchieve
                                     className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors"
                                 >
                                     Ya, Hapus Data
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ── Edit User Modal ── */}
+                {editModalOpen && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 bg-gray-900/40 backdrop-blur-sm">
+                        <div className="bg-white rounded-3xl max-w-[34rem] w-full shadow-xl overflow-hidden">
+                            {/* Modal Header */}
+                            <div className="bg-[#7b5b00] px-6 py-4">
+                                <h3 className="text-lg font-bold text-white tracking-tight">Edit Mahasiswa</h3>
+                            </div>
+                            {/* Modal Body */}
+                            <div className="p-6 grid grid-cols-2 gap-4">
+                                {/* Nama */}
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Nama Lengkap</label>
+                                    <input
+                                        type="text"
+                                        value={editForm.name}
+                                        onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+                                        className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                        placeholder="Nama lengkap"
+                                    />
+                                    {editErrors.name && <p className="text-xs text-red-500">{editErrors.name}</p>}
+                                </div>
+                                {/* NIM */}
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">NIM</label>
+                                    <input
+                                        type="text"
+                                        value={editForm.nim}
+                                        onChange={e => setEditForm(f => ({ ...f, nim: e.target.value }))}
+                                        className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                        placeholder="NIM mahasiswa"
+                                    />
+                                    {editErrors.nim && <p className="text-xs text-red-500">{editErrors.nim}</p>}
+                                </div>
+                                {/* Email */}
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Email</label>
+                                    <input
+                                        type="email"
+                                        value={editForm.email}
+                                        onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
+                                        className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                        placeholder="email@example.com"
+                                    />
+                                    {editErrors.email && <p className="text-xs text-red-500">{editErrors.email}</p>}
+                                </div>
+                                {/* Major */}
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Jurusan</label>
+                                    <input
+                                        type="text"
+                                        value={editForm.major}
+                                        onChange={e => setEditForm(f => ({ ...f, major: e.target.value }))}
+                                        className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                        placeholder="Program studi"
+                                    />
+                                    {editErrors.major && <p className="text-xs text-red-500">{editErrors.major}</p>}
+                                </div>
+                                {/* Role */}
+                                <div className="flex flex-col gap-1 col-span-2">
+                                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Role</label>
+                                    <select
+                                        value={editForm.role}
+                                        onChange={e => setEditForm(f => ({ ...f, role: e.target.value }))}
+                                        className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 capitalize cursor-pointer"
+                                    >
+                                        {ROLE_OPTIONS.map(r => (
+                                            <option key={r} value={r} className="capitalize">{r}</option>
+                                        ))}
+                                    </select>
+                                    {editForm.role === 'admin' && (
+                                        <p className="text-xs text-amber-600">Akun dengan role admin tidak akan tampil di daftar Manajemen Pengguna.</p>
+                                    )}
+                                    {editErrors.role && <p className="text-xs text-red-500">{editErrors.role}</p>}
+                                </div>
+                                {/* Password */}
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Password</label>
+                                    <input
+                                        type="password"
+                                        value={editForm.password}
+                                        onChange={e => setEditForm(f => ({ ...f, password: e.target.value }))}
+                                        className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                        placeholder="Kosongkan jika tidak diubah"
+                                    />
+                                    {editErrors.password && <p className="text-xs text-red-500">{editErrors.password}</p>}
+                                </div>
+                                {/* Confirm Password */}
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Konfirmasi Password</label>
+                                    <input
+                                        type="password"
+                                        value={editForm.password_confirmation}
+                                        onChange={e => setEditForm(f => ({ ...f, password_confirmation: e.target.value }))}
+                                        className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                        placeholder="Kosongkan jika tidak diubah"
+                                    />
+                                </div>
+                            </div>
+                            {/* Modal Footer */}
+                            <div className="px-6 pb-6 flex justify-end gap-3 border-t border-gray-100 pt-4">
+                                <button
+                                    onClick={closeEditModal}
+                                    className="px-5 py-2.5 rounded-xl font-bold text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    onClick={handleUpdateUser}
+                                    disabled={saving}
+                                    className="px-5 py-2.5 rounded-xl font-bold text-white bg-[#7b5b00] hover:bg-[#634900] transition-colors cursor-pointer text-sm disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+                                >
+                                    {saving && <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                                    Simpan Perubahan
                                 </button>
                             </div>
                         </div>

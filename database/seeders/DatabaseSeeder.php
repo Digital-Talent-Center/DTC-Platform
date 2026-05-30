@@ -7,6 +7,7 @@ use App\Models\ProfileExtension;
 use App\Models\Post;
 use App\Models\Achievement;
 use App\Models\Activity;
+use App\Models\Report;
 use App\Models\Notification;
 use App\Models\Document;
 use App\Models\Tag;
@@ -18,9 +19,9 @@ class DatabaseSeeder extends Seeder
     {
         // Create a demo user
         $user = User::create([
-            'name' => 'Demo User',
+            'name' => 'Akun Demo',
             'email' => 'demo@example.com',
-            'password' => bcrypt('password'),
+            'password' => bcrypt('ipalGemink123'),
             'email_verified_at' => now(),
         ]);
 
@@ -28,7 +29,7 @@ class DatabaseSeeder extends Seeder
         $admin = User::create([
             'name' => 'Admin User',
             'email' => 'admin@example.com',
-            'password' => bcrypt('password'),
+            'password' => bcrypt('admin1234'),
             'email_verified_at' => now(),
             'role' => 'admin',
         ]);
@@ -104,6 +105,15 @@ class DatabaseSeeder extends Seeder
             'description' => 'Attending AI/ML workshop',
             'status' => 'in_progress',
             'activity_date' => now(),
+        ]);
+
+        // Create demo report
+        Report::create([
+            'post_id'     => $post->id,
+            'user_id'     => $user->id,
+            'reason'      => 'inappropriate_content',
+            'description' => 'Postingan ini diduga mengandung konten yang tidak pantas dan perlu ditinjau oleh admin.',
+            'status'      => 'pending',
         ]);
 
         // Create demo notifications

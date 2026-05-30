@@ -5,6 +5,8 @@ import { Head, Link, router } from '@inertiajs/react';
 interface Student {
     id: number;
     name: string;
+    email: string;
+    role: string;
     major: string;
     nim: string;
     status: string;
@@ -13,6 +15,8 @@ interface Student {
 interface Props {
     students: Student[];
 }
+
+const ROLE_OPTIONS = ['student', 'admin'];
 
 export default function StudentManagement({ students: initialStudents }: Props) {
     const [students, setStudents] = useState<Student[]>(initialStudents || []);
@@ -24,9 +28,13 @@ export default function StudentManagement({ students: initialStudents }: Props) 
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [studentToDelete, setStudentToDelete] = useState<number | null>(null);
     const [createModalOpen, setCreateModalOpen] = useState(false);
-    const [createForm, setCreateForm] = useState({ name: '', email: '', password: '', password_confirmation: '', nim: '', major: '' });
+    const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+    const [editingId, setEditingId] = useState<number | null>(null);
+    const [createForm, setCreateForm] = useState({ name: '', email: '', password: '', password_confirmation: '', nim: '', major: '', role: 'student' });
     const [createErrors, setCreateErrors] = useState<Record<string, string>>({});
     const [creating, setCreating] = useState(false);
+
+    const emptyForm = { name: '', email: '', password: '', password_confirmation: '', nim: '', major: '', role: 'student' };
 
     useEffect(() => { setStudents(initialStudents); }, [initialStudents]);
 
@@ -94,18 +102,51 @@ export default function StudentManagement({ students: initialStudents }: Props) 
         });
     };
 
-    const handleCreate = () => {
-        setCreating(true);
-        router.post(route('admin.students.store'), createForm, {
-            preserveScroll: true,
-            onSuccess: () => {
-                setCreateModalOpen(false);
-                setCreateForm({ name: '', email: '', password: '', password_confirmation: '', nim: '', major: '' });
-                setCreateErrors({});
-            },
-            onError: (errors) => setCreateErrors(errors),
-            onFinish: () => setCreating(false),
+    const openCreate = () => {
+        setModalMode('create');
+        setEditingId(null);
+        setCreateForm({ ...emptyForm });
+        setCreateErrors({});
+        setCreateModalOpen(true);
+    };
+
+    const openEdit = (student: Student) => {
+        setModalMode('edit');
+        setEditingId(student.id);
+        setCreateForm({
+            name: student.name,
+            email: student.email,
+            password: '',
+            password_confirmation: '',
+            nim: student.nim === 'N/A' ? '' : student.nim,
+            major: student.major === 'N/A' ? '' : student.major,
+            role: student.role,
         });
+        setCreateErrors({});
+        setCreateModalOpen(true);
+    };
+
+    const closeModal = () => {
+        setCreateModalOpen(false);
+        setCreateForm({ ...emptyForm });
+        setCreateErrors({});
+        setEditingId(null);
+    };
+
+    const handleSubmit = () => {
+        setCreating(true);
+        const options = {
+            preserveScroll: true,
+            onSuccess: () => closeModal(),
+            onError: (errors: Record<string, string>) => setCreateErrors(errors),
+            onFinish: () => setCreating(false),
+        };
+
+        if (modalMode === 'edit' && editingId !== null) {
+            router.put(route('admin.students.update', editingId), createForm, options);
+        } else {
+            router.post(route('admin.students.store'), createForm, options);
+        }
     };
 
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -133,7 +174,7 @@ export default function StudentManagement({ students: initialStudents }: Props) 
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
                     <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight">Manajemen Mahasiswa</h1>
 
-                    <button onClick={() => setCreateModalOpen(true)} className="bg-[#7b5b00] hover:bg-[#634900] text-white font-semibold py-2.5 px-6 rounded-full flex items-center gap-2 transition-colors cursor-pointer shadow-sm">
+                    <button onClick={openCreate} className="bg-[#7b5b00] hover:bg-[#634900] text-white font-semibold py-2.5 px-6 rounded-full flex items-center gap-2 transition-colors cursor-pointer shadow-sm">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                             <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
                         </svg>
@@ -205,10 +246,11 @@ export default function StudentManagement({ students: initialStudents }: Props) 
                         <table className="w-full table-fixed text-sm">
                             <thead>
                                 <tr className="bg-[#fbbf24]">
-                                    <th className="text-left w-[35%] px-8 py-4 text-gray-900 font-bold text-xs uppercase tracking-wider">Nama</th>
-                                    <th className="text-left w-[25%] px-8 py-4 text-gray-900 font-bold text-xs uppercase tracking-wider">NIM / ID</th>
-                                    <th className="text-left w-[20%] px-8 py-4 text-gray-900 font-bold text-xs uppercase tracking-wider">Status</th>
-                                    <th className="text-left w-[20%] px-8 py-4 text-gray-900 font-bold text-xs uppercase tracking-wider">Aksi</th>
+                                    <th className="text-left w-[30%] px-8 py-4 text-gray-900 font-bold text-xs uppercase tracking-wider">Nama</th>
+                                    <th className="text-left w-[20%] px-8 py-4 text-gray-900 font-bold text-xs uppercase tracking-wider">NIM / ID</th>
+                                    <th className="text-left w-[15%] px-8 py-4 text-gray-900 font-bold text-xs uppercase tracking-wider">Role</th>
+                                    <th className="text-left w-[17%] px-8 py-4 text-gray-900 font-bold text-xs uppercase tracking-wider">Status</th>
+                                    <th className="text-left w-[18%] px-8 py-4 text-gray-900 font-bold text-xs uppercase tracking-wider">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
@@ -219,6 +261,11 @@ export default function StudentManagement({ students: initialStudents }: Props) 
                                             <p className="text-xs text-gray-500 mt-0.5">{student.major}</p>
                                         </td>
                                         <td className="px-8 py-4 text-gray-500 font-mono text-sm tracking-wide">{student.nim}</td>
+                                        <td className="px-8 py-4">
+                                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold tracking-wide capitalize ${student.role === "admin" ? "bg-[#fde68a] text-[#7b5b00]" : "bg-gray-100 text-gray-700"}`}>
+                                                {student.role}
+                                            </span>
+                                        </td>
                                         <td className="px-8 py-4">
                                             {student.status === "ACTIVE" ? (
                                                 <span className="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold tracking-wide bg-[#4ade80] text-gray-900 shadow-sm">
@@ -232,13 +279,13 @@ export default function StudentManagement({ students: initialStudents }: Props) 
                                         </td>
                                         <td className="px-8 py-4">
                                             <div className="flex items-center gap-4">
-                                                <button className="text-gray-400 hover:text-gray-700 transition-colors cursor-pointer" title="Lihat Profil">
+                                                <button onClick={() => router.visit(route('profile.show.user', student.id))} className="text-gray-400 hover:text-gray-700 transition-colors cursor-pointer" title="Lihat Profil">
                                                     <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                                         <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                                         <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                                     </svg>
                                                 </button>
-                                                <button className="text-gray-400 hover:text-amber-600 transition-colors cursor-pointer" title="Edit">
+                                                <button onClick={() => openEdit(student)} className="text-gray-400 hover:text-amber-600 transition-colors cursor-pointer" title="Edit">
                                                     <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                                         <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                                     </svg>
@@ -255,7 +302,7 @@ export default function StudentManagement({ students: initialStudents }: Props) 
 
                                 {paginatedStudents.length === 0 && (
                                     <tr>
-                                        <td colSpan={4} className="px-8 py-16 text-center text-gray-500 font-medium">
+                                        <td colSpan={5} className="px-8 py-16 text-center text-gray-500 font-medium">
                                             Tidak ada data mahasiswa yang ditemukan.
                                         </td>
                                     </tr>
@@ -332,7 +379,7 @@ export default function StudentManagement({ students: initialStudents }: Props) 
                     <div className="bg-white rounded-3xl max-w-[34rem] w-full shadow-xl overflow-hidden">
                         {/* Modal Header */}
                         <div className="bg-[#7b5b00] px-6 py-4">
-                            <h3 className="text-lg font-bold text-white tracking-tight">Tambah Mahasiswa Baru</h3>
+                            <h3 className="text-lg font-bold text-white tracking-tight">{modalMode === 'edit' ? 'Edit Mahasiswa' : 'Tambah Mahasiswa Baru'}</h3>
                         </div>
                         {/* Modal Body */}
                         <div className="p-6 grid grid-cols-2 gap-4">
@@ -384,6 +431,23 @@ export default function StudentManagement({ students: initialStudents }: Props) 
                                 />
                                 {createErrors.major && <p className="text-xs text-red-500">{createErrors.major}</p>}
                             </div>
+                            {/* Role */}
+                            <div className="flex flex-col gap-1 col-span-2">
+                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Role</label>
+                                <select
+                                    value={createForm.role}
+                                    onChange={e => setCreateForm(f => ({ ...f, role: e.target.value }))}
+                                    className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 capitalize cursor-pointer"
+                                >
+                                    {ROLE_OPTIONS.map(r => (
+                                        <option key={r} value={r} className="capitalize">{r}</option>
+                                    ))}
+                                </select>
+                                {createForm.role === 'admin' && (
+                                    <p className="text-xs text-amber-600">Akun dengan role admin tidak akan tampil di daftar Manajemen Mahasiswa.</p>
+                                )}
+                                {createErrors.role && <p className="text-xs text-red-500">{createErrors.role}</p>}
+                            </div>
                             {/* Password */}
                             <div className="flex flex-col gap-1">
                                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Password</label>
@@ -392,7 +456,7 @@ export default function StudentManagement({ students: initialStudents }: Props) 
                                     value={createForm.password}
                                     onChange={e => setCreateForm(f => ({ ...f, password: e.target.value }))}
                                     className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                                    placeholder="Min. 8 karakter"
+                                    placeholder={modalMode === 'edit' ? 'Kosongkan jika tidak diubah' : 'Min. 8 karakter'}
                                 />
                                 {createErrors.password && <p className="text-xs text-red-500">{createErrors.password}</p>}
                             </div>
@@ -404,29 +468,25 @@ export default function StudentManagement({ students: initialStudents }: Props) 
                                     value={createForm.password_confirmation}
                                     onChange={e => setCreateForm(f => ({ ...f, password_confirmation: e.target.value }))}
                                     className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                                    placeholder="Ulangi password"
+                                    placeholder={modalMode === 'edit' ? 'Kosongkan jika tidak diubah' : 'Ulangi password'}
                                 />
                             </div>
                         </div>
                         {/* Modal Footer */}
                         <div className="px-6 pb-6 flex justify-end gap-3 border-t border-gray-100 pt-4">
                             <button
-                                onClick={() => {
-                                    setCreateModalOpen(false);
-                                    setCreateForm({ name: '', email: '', password: '', password_confirmation: '', nim: '', major: '' });
-                                    setCreateErrors({});
-                                }}
+                                onClick={closeModal}
                                 className="px-5 py-2.5 rounded-xl font-bold text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer text-sm"
                             >
                                 Batal
                             </button>
                             <button
-                                onClick={handleCreate}
+                                onClick={handleSubmit}
                                 disabled={creating}
                                 className="px-5 py-2.5 rounded-xl font-bold text-white bg-[#7b5b00] hover:bg-[#634900] transition-colors cursor-pointer text-sm disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
                             >
                                 {creating && <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-                                Buat Akun
+                                {modalMode === 'edit' ? 'Simpan Perubahan' : 'Buat Akun'}
                             </button>
                         </div>
                     </div>

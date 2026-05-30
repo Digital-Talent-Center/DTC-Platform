@@ -79,6 +79,7 @@ Route::middleware(['auth'])->group(function () {
 
         Route::get('/admin/students', [UsersController::class, 'index'])->name('admin.students');
         Route::post('/admin/students', [UsersController::class, 'store'])->name('admin.students.store');
+        Route::put('/admin/students/{id}', [UsersController::class, 'update'])->name('admin.students.update');
         Route::delete('/admin/students/{id}', [UsersController::class, 'destroy'])->name('admin.students.destroy');
     });
 });

@@ -41,6 +41,7 @@ class RegisteredUserController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'role' => 'student',
         ]);
 
         // Create profile extension with additional registration data
