@@ -14,8 +14,19 @@
         @viteReactRefresh
         @vite(['resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
         @inertiaHead
+
+        {{-- Midtrans Snap.js — diload server-side agar tidak ada masalah Vite HMR --}}
+        @php
+            $midtransSnapUrl = config('services.midtrans.is_production', false)
+                ? 'https://app.midtrans.com/snap/snap.js'
+                : 'https://app.sandbox.midtrans.com/snap/snap.js';
+        @endphp
+        <script src="{{ $midtransSnapUrl }}"
+                data-client-key="{{ config('services.midtrans.client_key') }}"
+                defer></script>
     </head>
     <body class="font-sans antialiased">
         @inertia
     </body>
 </html>
+

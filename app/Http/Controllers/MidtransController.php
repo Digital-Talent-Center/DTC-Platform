@@ -73,9 +73,10 @@ class MidtransController extends Controller
     public function createTransaction(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'duration'        => 'required|in:7-hari,1-bulan,3-bulan',
-            'post_title'      => 'required|string|max:255',
-            'attachment_path' => 'nullable|string|max:500',
+            'duration'         => 'required|in:7-hari,1-bulan,3-bulan',
+            'post_title'       => 'required|string|max:255',
+            'post_description' => 'nullable|string|max:2000',
+            'attachment_path'  => 'nullable|string|max:500',
         ]);
 
         $user = Auth::user();
@@ -117,14 +118,15 @@ class MidtransController extends Controller
 
             // Simpan transaksi dengan status pending
             PremiumTransaction::create([
-                'user_id'         => $user->id,
-                'order_id'        => $orderId,
-                'snap_token'      => $snapToken,
-                'amount'          => $total,
-                'duration'        => $validated['duration'],
-                'post_title'      => $validated['post_title'],
-                'attachment_path' => $validated['attachment_path'] ?? null,
-                'status'          => 'pending',
+                'user_id'          => $user->id,
+                'order_id'         => $orderId,
+                'snap_token'       => $snapToken,
+                'amount'           => $total,
+                'duration'         => $validated['duration'],
+                'post_title'       => $validated['post_title'],
+                'post_description' => $validated['post_description'] ?? null,
+                'attachment_path'  => $validated['attachment_path'] ?? null,
+                'status'           => 'pending',
             ]);
 
             return response()->json([

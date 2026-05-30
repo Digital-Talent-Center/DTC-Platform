@@ -68,6 +68,7 @@ export interface PremiumTransaction {
     id: number;
     userId: number;
     postTitle: string;
+    postDescription?: string | null;
     duration: string;
     amount: number;
     paymentType?: string;

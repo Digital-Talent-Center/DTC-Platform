@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int         $amount           Total nominal dalam rupiah
  * @property string      $duration         Durasi layanan: '7-hari' | '1-bulan' | '3-bulan'
  * @property string      $post_title       Judul kegiatan yang dipromosikan
+ * @property string|null $post_description Deskripsi detail kegiatan
  * @property string      $status           'pending' | 'paid' | 'failed' | 'cancelled'
  * @property string|null $midtrans_transaction_id  Transaction ID dari Midtrans
  * @property string|null $payment_type     Metode pembayaran dari Midtrans (e.g. gopay, bank_transfer)
@@ -34,6 +35,7 @@ class PremiumTransaction extends Model
         'amount',
         'duration',
         'post_title',
+        'post_description',
         'attachment_path',
         'status',
         'midtrans_transaction_id',

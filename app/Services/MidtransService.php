@@ -116,6 +116,6 @@ class MidtransService
 
             // Gagal / fraud
             default => 'failed',
-        ];
+        };
     }
 }

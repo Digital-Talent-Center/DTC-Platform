@@ -35,18 +35,19 @@ class PremiumTransactionController extends Controller
             ->get()
             ->map(function (PremiumTransaction $tx) {
                 return [
-                    'id'             => $tx->id,
-                    'userId'         => $tx->user_id,
-                    'postTitle'      => $tx->post_title,
-                    'attachmentPath' => $tx->attachment_path,
-                    'imageUrl'       => $tx->imageUrl, // Menggunakan accessor dari model
-                    'duration'       => $tx->duration,
-                    'amount'         => $tx->amount,
-                    'paymentType'    => $tx->payment_type,
-                    'paidAt'         => $tx->paid_at?->toISOString(),
-                    'createdAt'      => $tx->created_at->toISOString(),
-                    'updatedAt'      => $tx->updated_at->toISOString(),
-                    'user'           => $tx->user ? [
+                    'id'              => $tx->id,
+                    'userId'          => $tx->user_id,
+                    'postTitle'       => $tx->post_title,
+                    'postDescription' => $tx->post_description,
+                    'attachmentPath'  => $tx->attachment_path,
+                    'imageUrl'        => $tx->imageUrl, // Menggunakan accessor dari model
+                    'duration'        => $tx->duration,
+                    'amount'          => $tx->amount,
+                    'paymentType'     => $tx->payment_type,
+                    'paidAt'          => $tx->paid_at?->toISOString(),
+                    'createdAt'       => $tx->created_at->toISOString(),
+                    'updatedAt'       => $tx->updated_at->toISOString(),
+                    'user'            => $tx->user ? [
                         'id'   => $tx->user->id,
                         'name' => $tx->user->name,
                     ] : null,
