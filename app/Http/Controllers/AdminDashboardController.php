@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Achievement;
 use App\Models\Report;
+use App\Models\Guide;
+use App\Models\Document;
 use Inertia\Inertia;
 
 class AdminDashboardController extends Controller
@@ -77,6 +79,26 @@ class AdminDashboardController extends Controller
             ];
         });
 
+        // 5 Co-Guide terbaru (preview)
+        $recentGuides = Guide::latest()->take(5)->get()->map(function ($guide) {
+            return [
+                'id'       => $guide->id,
+                'title'    => $guide->title,
+                'category' => $guide->category ?? '-',
+                'level'    => $guide->level ?? '-',
+            ];
+        });
+
+        // 5 Co-Library terbaru (preview)
+        $recentDocuments = Document::latest()->take(5)->get()->map(function ($document) {
+            return [
+                'id'       => $document->id,
+                'title'    => $document->title,
+                'type'     => $document->type ?? '-',
+                'level'    => $document->level ?? '-',
+            ];
+        });
+
         return Inertia::render('admin/dashboard', [
             'totalStudents'            => $totalStudents,
             'totalApprovedAchievements'=> $totalApprovedAchievements,
@@ -84,6 +106,8 @@ class AdminDashboardController extends Controller
             'recentUsers'              => $recentUsers,
             'recentAchievements'       => $recentAchievements,
             'recentReports'            => $recentReports,
+            'recentGuides'             => $recentGuides,
+            'recentDocuments'          => $recentDocuments,
         ]);
     }
 }

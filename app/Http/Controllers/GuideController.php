@@ -5,10 +5,94 @@ namespace App\Http\Controllers;
 use App\Models\Guide;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Inertia\Inertia;
 
 class GuideController extends Controller
 {
     use ApiResponseHelper;
+
+    /**
+     * Admin: render Co-Guide management page (Inertia)
+     */
+    public function adminIndex()
+    {
+        $guides = Guide::latest()->paginate(24);
+
+        $mapped = $guides->getCollection()->map(function ($guide) {
+            return [
+                'id'              => $guide->id,
+                'title'           => $guide->title,
+                'description'     => $guide->description,
+                'category'        => $guide->category,
+                'level'           => $guide->level,
+                'year'            => $guide->year,
+                'file_path'       => $guide->file_path,
+                'tags'            => $guide->tags ?? [],
+                'views_count'     => $guide->views_count,
+                'downloads_count' => $guide->downloads_count,
+                'created_at'      => $guide->created_at?->toISOString(),
+            ];
+        });
+
+        return Inertia::render('admin/CoGuide-Management', [
+            'initialGuides' => $mapped,
+            'total'         => $guides->total(),
+        ]);
+    }
+
+    /**
+     * Admin: store a new guide with PDF upload (Inertia)
+     */
+    public function adminStore(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $validated = $request->validate([
+            'title'       => 'required|string|max:255',
+            'description' => 'nullable|string|max:5000',
+            'category'    => 'nullable|string|max:100',
+            'level'       => 'nullable|in:beginner,intermediate,advanced',
+            'year'        => 'nullable|integer|min:1900|max:' . now()->year,
+            'tags'        => 'nullable|string|max:255',
+            'file'        => 'required|file|mimes:pdf|max:10240',
+        ]);
+
+        $path = $request->file('file')->store('guides', 'public');
+
+        $tags = collect(explode(',', $request->input('tags', '')))
+            ->map(fn ($t) => trim($t))
+            ->filter()
+            ->values()
+            ->all();
+
+        Guide::create([
+            'user_id'     => Auth::id(),
+            'title'       => $validated['title'],
+            'description' => $validated['description'] ?? null,
+            'category'    => $validated['category'] ?? null,
+            'level'       => $validated['level'] ?? null,
+            'year'        => $validated['year'] ?? null,
+            'file_path'   => Storage::url($path),
+            'file_icon'   => 'pdf',
+            'tags'        => $tags,
+            'is_public'   => true,
+        ]);
+
+        return back();
+    }
+
+    /**
+     * Admin: delete a guide and its uploaded file (Inertia)
+     */
+    public function adminDestroy(Guide $guide): \Illuminate\Http\RedirectResponse
+    {
+        if ($guide->file_path && str_starts_with($guide->file_path, '/storage/')) {
+            Storage::disk('public')->delete(str_replace('/storage/', '', $guide->file_path));
+        }
+
+        $guide->delete();
+
+        return back();
+    }
 
     /**
      * Get all public guides with filtering
