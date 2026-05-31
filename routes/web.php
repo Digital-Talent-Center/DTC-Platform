@@ -31,11 +31,9 @@ Route::middleware(['auth'])->group(function () {
         return Inertia::render('profile-edit');
     })->name('profile.edit');
 
-    // ✅ FIX: pakai controller, bukan closure
     Route::get('dashboard/activities', [ActivityController::class, 'page'])
         ->name('dashboard.activities');
 
-    // ✅ CREATE
     Route::post('/activities', [ActivityController::class, 'store'])
         ->name('activities.store');
 

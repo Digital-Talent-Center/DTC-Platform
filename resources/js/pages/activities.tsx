@@ -504,7 +504,7 @@ export default function ActivitiesPage() {
                 </div>
                 {/* Action Buttons */}
                 <div className="mt-4 flex items-center gap-2">
-                  {item.type === 'task' && (item.status === 'pending' || item.status === 'overdue') && (
+                  {item.type === 'task' && item.status === 'pending' && (
                     <button onClick={() => startTask(item.id)} className="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-medium rounded-full transition-colors">
                       Start
                     </button>
