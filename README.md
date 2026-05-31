@@ -135,22 +135,38 @@ DB_HOST=127.0.0.1
 DB_PORT=5432
 DB_DATABASE=dtc_platform
 DB_USERNAME=postgres
-DB_PASSWORD=your_password
+DB_PASSWORD=(isi_password)
 ```
 
 Untuk fitur pembayaran (Midtrans Sandbox):
 ```env
-MIDTRANS_SERVER_KEY=your_server_key
-MIDTRANS_CLIENT_KEY=your_client_key
+MIDTRANS_SERVER_KEY=Mid-server-tOmErGbEpNXbNW0UpfFcCOgV
+MIDTRANS_CLIENT_KEY=Mid-client-FZgCuX4t9C8DJA9z
 MIDTRANS_IS_PRODUCTION=false
 VITE_MIDTRANS_CLIENT_KEY="${MIDTRANS_CLIENT_KEY}"
 VITE_MIDTRANS_SNAP_URL=https://app.sandbox.midtrans.com/snap/snap.js
 ```
 
-**6. Jalankan migrasi**
+**6. Jalankan migrasi dan seeder**
+
+Untuk setup awal lengkap dengan data demo:
+```bash
+php artisan migrate:fresh --seed
+```
+
+Atau jika hanya ingin menjalankan migrasi tanpa data demo:
 ```bash
 php artisan migrate
 ```
+
+Seeder akan membuat dua akun bawaan yang bisa langsung dipakai:
+
+| Role | Email | Password |
+|------|-------|----------|
+| Student (Demo) | `demo@example.com` | `ipalGemink123` |
+| Admin | `admin@example.com` | `admin1234` |
+
+> **Catatan:** Akun demo juga dilengkapi dengan contoh data — posts, achievements, activities, notifications, dan dokumen — supaya tampilan aplikasi tidak kosong saat pertama kali dijalankan.
 
 **7. (Opsional) Buat symlink storage**
 ```bash
@@ -224,16 +240,6 @@ Semua API response menggunakan format konsisten:
 }
 ```
 Field `message` dan `pagination` bersifat opsional tergantung endpoint.
-
----
-
-## Tim Pengembang
-
-> Proyek ini dikembangkan sebagai tugas akhir mata kuliah **Aplikasi Berbasis Platform (ABP)** — Semester 6.
-
-| Nama | Role |
-|------|------|
-| *(sesuaikan dengan anggota tim)* | Fullstack Developer |
 
 ---
 
