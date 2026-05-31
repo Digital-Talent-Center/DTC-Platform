@@ -3,6 +3,7 @@ import AppLayout from "@/layouts/app-layout";
 import { Head, Link, usePage } from "@inertiajs/react";
 import { api, type ProfileExtension, type Achievement, type Post } from '@/services/api';
 import { type SharedData } from '@/types';
+import { Trophy, Award, BookOpen, GraduationCap, Briefcase, Star, Calendar, Library, BookText, Sparkles, Bell } from 'lucide-react';
 
 export default function ProfilePage({ userId }: { userId?: string | number }) {
   const { auth } = usePage<SharedData>().props;
@@ -34,9 +35,12 @@ export default function ProfilePage({ userId }: { userId?: string | number }) {
     return date.toLocaleDateString();
   };
 
-  const categoryIcons: Record<string, string> = {
-    competition: '🏆', certification: '📜', publication: '📖',
-    scholarship: '🎓', internship: '💼',
+  const categoryIcons: Record<string, React.ReactNode> = {
+    competition: <Trophy className="w-5 h-5 text-amber-600" />,
+    certification: <Award className="w-5 h-5 text-amber-600" />,
+    publication: <BookOpen className="w-5 h-5 text-amber-600" />,
+    scholarship: <GraduationCap className="w-5 h-5 text-amber-600" />,
+    internship: <Briefcase className="w-5 h-5 text-amber-600" />,
   };
 
   useEffect(() => {
@@ -162,7 +166,7 @@ export default function ProfilePage({ userId }: { userId?: string | number }) {
                 <div className="space-y-4">
                   {achievements.map((a) => (
                     <div key={a.id} className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-lg flex-shrink-0">{categoryIcons[a.category] ?? '⭐'}</div>
+                      <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-lg flex-shrink-0">{categoryIcons[a.category] ?? <Star className="w-5 h-5 text-amber-600" />}</div>
                       <div>
                         <p className="text-sm font-semibold text-gray-900 line-clamp-1">{a.title}</p>
                         <p className="text-xs text-gray-400 capitalize">{a.category} • {a.year}</p>
@@ -181,18 +185,21 @@ export default function ProfilePage({ userId }: { userId?: string | number }) {
                 <h2 className="text-lg font-bold text-gray-900 mb-5 flex items-center gap-2"><span className="w-1 h-5 bg-amber-500 rounded-full" />Quick Actions</h2>
                 <div className="grid grid-cols-2 gap-4">
                   {[
-                    { label: 'Submit Achievement', href: '/dashboard/achievements/new', icon: '🏆', color: 'bg-amber-50 border-amber-100 hover:border-amber-200' },
-                    { label: 'My Activities', href: '/dashboard/activities', icon: '📅', color: 'bg-purple-50 border-purple-100 hover:border-purple-200' },
-                    { label: 'Co-Library', href: '/dashboard/co-library', icon: '📚', color: 'bg-pink-50 border-pink-100 hover:border-pink-200' },
-                    { label: 'Co-Guide', href: '/dashboard/co-guide', icon: '📖', color: 'bg-blue-50 border-blue-100 hover:border-blue-200' },
-                    { label: 'Timeline', href: '/timeline', icon: '✨', color: 'bg-green-50 border-green-100 hover:border-green-200' },
-                    { label: 'Notifications', href: '/notifications', icon: '🔔', color: 'bg-orange-50 border-orange-100 hover:border-orange-200' },
-                  ].map(item => (
-                    <Link key={item.label} href={item.href} className={`${item.color} rounded-xl border p-4 flex flex-col items-start gap-2 hover:shadow-sm transition-all`}>
-                      <span className="text-2xl">{item.icon}</span>
-                      <span className="text-xs font-semibold text-gray-700">{item.label}</span>
-                    </Link>
-                  ))}
+                    { label: 'Submit Achievement', href: '/dashboard/achievements/new', icon: Trophy, color: 'bg-amber-50 border-amber-100 hover:border-amber-200 hover:bg-amber-100', textColor: 'text-amber-600' },
+                    { label: 'My Activities', href: '/dashboard/activities', icon: Calendar, color: 'bg-purple-50 border-purple-100 hover:border-purple-200 hover:bg-purple-100', textColor: 'text-purple-600' },
+                    { label: 'Co-Library', href: '/dashboard/co-library', icon: Library, color: 'bg-pink-50 border-pink-100 hover:border-pink-200 hover:bg-pink-100', textColor: 'text-pink-600' },
+                    { label: 'Co-Guide', href: '/dashboard/co-guide', icon: BookText, color: 'bg-blue-50 border-blue-100 hover:border-blue-200 hover:bg-blue-100', textColor: 'text-blue-600' },
+                    { label: 'Timeline', href: '/timeline', icon: Sparkles, color: 'bg-green-50 border-green-100 hover:border-green-200 hover:bg-green-100', textColor: 'text-green-600' },
+                    { label: 'Notifications', href: '/notifications', icon: Bell, color: 'bg-orange-50 border-orange-100 hover:border-orange-200 hover:bg-orange-100', textColor: 'text-orange-600' },
+                  ].map(item => {
+                    const Icon = item.icon;
+                    return (
+                      <Link key={item.label} href={item.href} className={`${item.color} rounded-xl border p-4 flex flex-col items-start gap-2 hover:shadow-sm transition-all group`}>
+                        <Icon className={`w-6 h-6 ${item.textColor} group-hover:scale-110 transition-transform`} />
+                        <span className={`text-xs font-bold ${item.textColor}`}>{item.label}</span>
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
             )}

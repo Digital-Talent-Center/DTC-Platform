@@ -14,20 +14,25 @@ class ProfileExtensionController extends Controller
      * Get authenticated user's profile extension
      */
     public function show()
-{
-    $userId = Auth::id();
+    {
+        $userId = Auth::id();
 
-    $profile = ProfileExtension::with('user')
-        ->where('user_id', $userId)
-        ->first();
+        $profile = ProfileExtension::with('user')
+            ->where('user_id', $userId)
+            ->first();
 
-    if (!$profile) {
-        $profile = ProfileExtension::create(['user_id' => $userId]);
-        $profile->load('user'); // penting!
+        if (!$profile) {
+            $profile = ProfileExtension::create(['user_id' => $userId]);
+            $profile->load('user'); // penting!
+        }
+
+        if ($profile->user) {
+            $profile->posts_count = $profile->user->posts()->count();
+            $profile->completed_tasks_count = $profile->user->activities()->where('status', 'completed')->count();
+        }
+
+        return $this->apiResponse($profile);
     }
-
-    return $this->apiResponse($profile);
-}
 
     /**
      * Get other user's profile extension
@@ -38,6 +43,11 @@ class ProfileExtensionController extends Controller
 
         if (!$profile) {
             return $this->messageResponse('Profile not found', 404);
+        }
+
+        if ($profile->user) {
+            $profile->posts_count = $profile->user->posts()->count();
+            $profile->completed_tasks_count = $profile->user->activities()->where('status', 'completed')->count();
         }
 
         return $this->apiResponse($profile);

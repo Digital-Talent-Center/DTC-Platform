@@ -271,7 +271,7 @@ export default function ActivitiesPage() {
         // Transform API data to component format
         const list = data.data ?? [];
         
-        const transformed = (Array.isArray(list) ? list : list.data ?? []).map((item: any) => {
+        const transformed = (Array.isArray(list) ? list : (list as any).data ?? []).map((item: any) => {
           const normalizedStatus = (item.status || '').toLowerCase();
 
           return {
