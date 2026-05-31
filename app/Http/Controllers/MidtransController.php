@@ -51,7 +51,7 @@ class MidtransController extends Controller
     public function uploadAttachment(Request $request): JsonResponse
     {
         $request->validate([
-            'file' => 'required|file|mimes:pdf,png,jpg,jpeg|max:10240',
+            'file' => 'required|image|mimes:jpg,jpeg,png,webp|max:10240',
         ]);
 
         $file = $request->file('file');
@@ -59,7 +59,8 @@ class MidtransController extends Controller
 
         return response()->json([
             'path'     => $path,
-            'url'      => Storage::disk('public')->url($path),
+            // Gunakan path relatif agar preview benar di semua host/port (127.0.0.1:8000, dll)
+            'url'      => '/storage/' . $path,
             'filename' => $file->getClientOriginalName(),
         ]);
     }

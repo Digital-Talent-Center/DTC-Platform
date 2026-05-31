@@ -38,7 +38,7 @@ declare global {
 }
 
 // ─── Module-level constants (di luar JSX, tidak ada masalah Vite HMR) ─────────
-const ALLOWED_TYPES: string[] = ['application/pdf', 'image/png', 'image/jpeg'];
+const ALLOWED_TYPES: string[] = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
 const MAX_FILE_BYTES           = 10 * 1024 * 1024; // 10MB
 const TAX_RATE                 = 0.11;
 
@@ -121,7 +121,7 @@ export default function PremiumPostPage() {
 
     if (!ALLOWED_TYPES.includes(incoming.type)) {
       setFormErrors(function(prev) {
-        return Object.assign({}, prev, { file: 'Format file tidak valid. Gunakan PDF, PNG, atau JPG/JPEG.' });
+        return Object.assign({}, prev, { file: 'Format file tidak valid. Hanya gambar JPG, JPEG, PNG, atau WEBP yang diizinkan.' });
       });
       resetFile();
       return;
@@ -489,13 +489,13 @@ export default function PremiumPostPage() {
                           ? 'Klik untuk ganti file'
                           : 'Klik untuk unggah atau seret file'}
                     </p>
-                    <p className="text-[11px] text-gray-400">PDF, PNG, atau JPG/JPEG (Maks. 10MB)</p>
+                    <p className="text-[11px] text-gray-400">JPG, PNG, atau WEBP (Maks. 10MB)</p>
 
                     <input
                       ref={fileInputRef}
                       id="lampiran"
                       type="file"
-                      accept=".pdf,image/png,image/jpeg"
+                      accept="image/jpeg,image/png,image/webp"
                       className="hidden"
                       onChange={function(e: ChangeEvent<HTMLInputElement>) {
                         const files = e.target.files;

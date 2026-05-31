@@ -78,7 +78,9 @@ class PremiumTransaction extends Model
             return null;
         }
 
-        return \Illuminate\Support\Facades\Storage::disk('public')->url($path);
+        // Gunakan path relatif agar URL benar di semua host/port (localhost, 127.0.0.1:8000, dll)
+        // Storage::disk('public')->url() menggunakan APP_URL yang sering tidak cocok saat dev
+        return '/storage/' . $path;
     }
 
     /**

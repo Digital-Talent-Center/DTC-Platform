@@ -136,12 +136,21 @@ function PremiumModal({ tx, onClose }: { tx: PremiumTransaction; onClose: () => 
               src={tx.imageUrl}
               alt={tx.postTitle}
               className="w-full h-full object-cover"
+              onError={(e) => {
+                const target = e.currentTarget;
+                target.style.display = 'none';
+                const fallback = target.nextElementSibling as HTMLElement | null;
+                if (fallback) fallback.style.display = 'flex';
+              }}
             />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
-              <span className="text-gray-500">No image</span>
-            </div>
-          )}
+          ) : null}
+          {/* Fallback: tampil jika tidak ada imageUrl ATAU jika gambar gagal load */}
+          <div
+            className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 items-center justify-center"
+            style={{ display: tx.imageUrl ? 'none' : 'flex' }}
+          >
+            <span className="text-gray-500">No image</span>
+          </div>
           <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-black/30 to-transparent md:hidden" />
         </div>
 
@@ -348,12 +357,20 @@ function PremiumPostsSection() {
                         src={tx.imageUrl}
                         alt={tx.postTitle}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          target.style.display = 'none';
+                          const fallback = target.nextElementSibling as HTMLElement | null;
+                          if (fallback) fallback.style.display = 'flex';
+                        }}
                       />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
-                        <span className="text-gray-500 text-xs">No image</span>
-                      </div>
-                    )}
+                    ) : null}
+                    <div
+                      className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 items-center justify-center"
+                      style={{ display: tx.imageUrl ? 'none' : 'flex' }}
+                    >
+                      <span className="text-gray-500 text-xs">No image</span>
+                    </div>
                     {/* Badge POST */}
                     <div className="absolute top-3 left-0 bg-gradient-to-r from-amber-500 to-orange-400 text-white text-[10px] font-bold px-2.5 py-1 rounded-r-full shadow-md flex items-center gap-1">
                       <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3" viewBox="0 0 20 20" fill="currentColor">
