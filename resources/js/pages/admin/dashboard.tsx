@@ -99,7 +99,7 @@ export default function AdminDashboardPage({ totalStudents, totalApprovedAchieve
             password_confirmation: '',
             nim: user.nim === 'N/A' ? '' : user.nim,
             major: user.major === 'N/A' ? '' : user.major,
-            role: user.role,
+            role: ROLE_OPTIONS.includes(user.role) ? user.role : 'student',
         });
         setEditErrors({});
         setEditModalOpen(true);
@@ -118,14 +118,9 @@ export default function AdminDashboardPage({ totalStudents, totalApprovedAchieve
         router.put(route('admin.students.update', editingId), editForm, {
             preserveScroll: true,
             onSuccess: () => {
-                setUsers(prev => {
-                    if (editForm.role === 'admin') {
-                        return prev.filter(u => u.id !== editingId);
-                    }
-                    return prev.map(u => u.id === editingId
-                        ? { ...u, name: editForm.name, email: editForm.email, role: editForm.role, nim: editForm.nim || 'N/A', major: editForm.major || 'N/A' }
-                        : u);
-                });
+                setUsers(prev => prev.map(u => u.id === editingId
+                    ? { ...u, name: editForm.name, email: editForm.email, role: editForm.role, nim: editForm.nim || 'N/A', major: editForm.major || 'N/A' }
+                    : u));
                 closeEditModal();
             },
             onError: (errors) => setEditErrors(errors),
@@ -352,7 +347,7 @@ export default function AdminDashboardPage({ totalStudents, totalApprovedAchieve
                                         ))}
                                     </select>
                                     {editForm.role === 'admin' && (
-                                        <p className="text-xs text-amber-600">Akun dengan role admin tidak akan tampil di daftar Manajemen Pengguna.</p>
+                                        <p className="text-xs text-amber-600">Akun ini akan diberi akses admin (dapat mengelola pengguna lain).</p>
                                     )}
                                     {editErrors.role && <p className="text-xs text-red-500">{editErrors.role}</p>}
                                 </div>

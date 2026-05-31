@@ -120,7 +120,7 @@ export default function StudentManagement({ students: initialStudents }: Props) 
             password_confirmation: '',
             nim: student.nim === 'N/A' ? '' : student.nim,
             major: student.major === 'N/A' ? '' : student.major,
-            role: student.role,
+            role: ROLE_OPTIONS.includes(student.role) ? student.role : 'student',
         });
         setCreateErrors({});
         setCreateModalOpen(true);
@@ -444,7 +444,7 @@ export default function StudentManagement({ students: initialStudents }: Props) 
                                     ))}
                                 </select>
                                 {createForm.role === 'admin' && (
-                                    <p className="text-xs text-amber-600">Akun dengan role admin tidak akan tampil di daftar Manajemen Mahasiswa.</p>
+                                    <p className="text-xs text-amber-600">Akun ini akan diberi akses admin (dapat mengelola pengguna lain).</p>
                                 )}
                                 {createErrors.role && <p className="text-xs text-red-500">{createErrors.role}</p>}
                             </div>

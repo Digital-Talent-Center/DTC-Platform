@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             'email' => 'demo@example.com',
             'password' => bcrypt('ipalGemink123'),
             'email_verified_at' => now(),
+            'role' => 'student',
         ]);
 
         // Create an admin user

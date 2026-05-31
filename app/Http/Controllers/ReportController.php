@@ -254,10 +254,16 @@ class ReportController extends Controller
         $reportsData = $query->latest('created_at')->paginate(24);
 
         $reports = $reportsData->through(function ($report) {
+            $initials = collect(explode(' ', $report->reporter->name ?? 'U K'))
+                ->map(fn($word) => strtoupper(substr($word, 0, 1)))
+                ->take(2)
+                ->join('');
+
             return [
                 'id'          => $report->id,
                 'user'        => $report->reporter->name ?? 'Unknown',
-                'avatarUrl'   => 'https://i.pravatar.cc/150?u=' . ($report->reporter->id ?? $report->id),
+                'userId'      => $report->reporter->id ?? null,
+                'avatar'      => $initials,
                 'reason'      => strtoupper(str_replace('_', ' ', $report->reason)),
                 'content'     => $report->description ?? ($report->post->content ?? 'Tidak ada deskripsi.'),
                 'status'      => $report->status,

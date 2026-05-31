@@ -10,7 +10,7 @@ interface ReportItem {
     id: number;
     user: string;
     userId: number | null;
-    avatarUrl: string;
+    avatar: string;
     reason: string;
     content: string;
     status: string;
@@ -92,21 +92,15 @@ export default function ReportListPage({ initialReports, pendingCount }: Props) 
                                 >
                                     {/* Card Header: Avatar & Name */}
                                     <div className="flex items-start gap-4 mb-6">
-                                        <div className="w-11 h-11 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+                                        <div className="w-11 h-11 rounded-full overflow-hidden flex-shrink-0">
                                             {report.userId ? (
-                                                <Link href={`/profile/${report.userId}`}>
-                                                    <img
-                                                        src={report.avatarUrl}
-                                                        alt={report.user}
-                                                        className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all"
-                                                    />
+                                                <Link href={`/profile/${report.userId}`} className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-400 to-slate-600 text-white text-sm font-bold hover:opacity-90 transition-opacity">
+                                                    {report.avatar}
                                                 </Link>
                                             ) : (
-                                                <img
-                                                    src={report.avatarUrl}
-                                                    alt={report.user}
-                                                    className="w-full h-full object-cover grayscale"
-                                                />
+                                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-400 to-slate-600 text-white text-sm font-bold">
+                                                    {report.avatar}
+                                                </div>
                                             )}
                                         </div>
                                         <div>

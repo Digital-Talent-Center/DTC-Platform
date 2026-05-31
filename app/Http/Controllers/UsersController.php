@@ -74,7 +74,7 @@ class UsersController extends Controller
 
     public function index()
     {
-        $users = User::with('profileExtension')->where('role', '!=', 'admin')->get();
+        $users = User::with('profileExtension')->where('email', '!=', 'admin@example.com')->get();
 
         $students = $users->map(function ($user) {
             return [

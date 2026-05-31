@@ -22,7 +22,7 @@ class AdminDashboardController extends Controller
 
         // 5 Recent Users
         $usersData = User::with('profileExtension')
-            ->where('role', '!=', 'admin')
+            ->where('email', '!=', 'admin@example.com')
             ->latest()
             ->take(5)
             ->get();
