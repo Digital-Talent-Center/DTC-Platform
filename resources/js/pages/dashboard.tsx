@@ -307,9 +307,6 @@ function PremiumPostsSection() {
             </svg>
           </div>
           <p className="text-gray-700 font-semibold">Belum ada Premium Post yang tersedia.</p>
-          <p className="text-sm text-gray-400 max-w-xs">
-            Premium Post akan muncul di sini setelah pembayaran berhasil dikonfirmasi.
-          </p>
           <Link
             href="/dashboard/premium-post"
             className="mt-2 inline-flex items-center gap-2 px-5 py-2 rounded-full bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition-colors"
