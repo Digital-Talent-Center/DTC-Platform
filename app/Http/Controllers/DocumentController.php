@@ -7,10 +7,109 @@ use App\Models\Tag;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Inertia;
 
 class DocumentController extends Controller
 {
     use ApiResponseHelper;
+
+    /**
+     * Admin: render Co-Library management page (Inertia)
+     */
+    public function adminIndex()
+    {
+        $documents = Document::with('tags')->latest()->paginate(24);
+
+        $mapped = $documents->getCollection()->map(function ($document) {
+            return [
+                'id'              => $document->id,
+                'title'           => $document->title,
+                'description'     => $document->description,
+                'type'            => $document->type,
+                'category'        => $document->category,
+                'competition'     => $document->competition,
+                'level'           => $document->level,
+                'year'            => $document->year,
+                'file_path'       => $document->file_path,
+                'tags'            => $document->relationLoaded('tags')
+                    ? $document->getRelation('tags')->pluck('name')->all()
+                    : [],
+                'views_count'     => $document->views_count,
+                'downloads_count' => $document->downloads_count,
+                'created_at'      => $document->created_at?->toISOString(),
+            ];
+        });
+
+        return Inertia::render('admin/CoLibrary-Management', [
+            'initialDocuments' => $mapped,
+            'total'            => $documents->total(),
+        ]);
+    }
+
+    /**
+     * Admin: store a new document with PDF upload (Inertia)
+     */
+    public function adminStore(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $validated = $request->validate([
+            'title'       => 'required|string|max:255',
+            'description' => 'nullable|string|max:5000',
+            'type'        => 'nullable|string|max:100',
+            'category'    => 'nullable|string|max:100',
+            'competition' => 'nullable|string|max:100',
+            'level'       => 'nullable|in:beginner,intermediate,advanced',
+            'year'        => 'nullable|integer|min:1900|max:' . now()->year,
+            'tags'        => 'nullable|string|max:255',
+            'file'        => 'required|file|mimes:pdf|max:10240',
+        ]);
+
+        $path = $request->file('file')->store('documents', 'public');
+
+        $document = Document::create([
+            'user_id'     => Auth::id(),
+            'title'       => $validated['title'],
+            'description' => $validated['description'] ?? null,
+            'type'        => $validated['type'] ?? 'resource',
+            'category'    => $validated['category'] ?? 'co-library',
+            'competition' => $validated['competition'] ?? null,
+            'level'       => $validated['level'] ?? null,
+            'year'        => $validated['year'] ?? null,
+            'file_path'   => Storage::url($path),
+            'file_icon'   => 'pdf',
+            'is_public'   => true,
+        ]);
+
+        // Attach tags (comma-separated)
+        $tagNames = collect(explode(',', $request->input('tags', '')))
+            ->map(fn ($t) => trim($t))
+            ->filter();
+
+        if ($tagNames->isNotEmpty()) {
+            $tagIds = $tagNames->map(function ($tagName) {
+                return Tag::firstOrCreate(
+                    ['slug' => \Illuminate\Support\Str::slug($tagName)],
+                    ['name' => $tagName]
+                )->id;
+            })->all();
+            $document->tags()->attach($tagIds);
+        }
+
+        return back();
+    }
+
+    /**
+     * Admin: delete a document and its uploaded file (Inertia)
+     */
+    public function adminDestroy(Document $document): \Illuminate\Http\RedirectResponse
+    {
+        if ($document->file_path && str_starts_with($document->file_path, '/storage/')) {
+            Storage::disk('public')->delete(str_replace('/storage/', '', $document->file_path));
+        }
+
+        $document->delete();
+
+        return back();
+    }
 
     /**
      * Get all documents with filtering

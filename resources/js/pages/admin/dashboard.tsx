@@ -30,6 +30,20 @@ interface ReportData {
     content: string;
 }
 
+interface GuideData {
+    id: number;
+    title: string;
+    category: string;
+    level: string;
+}
+
+interface DocLiteData {
+    id: number;
+    title: string;
+    type: string;
+    level: string;
+}
+
 interface DashboardProps {
     totalStudents: number;
     totalApprovedAchievements: number;
@@ -37,6 +51,8 @@ interface DashboardProps {
     recentUsers: UserData[];
     recentAchievements: AchievementData[];
     recentReports: ReportData[];
+    recentGuides: GuideData[];
+    recentDocuments: DocLiteData[];
 }
 
 /* ─── Sub-Components ─── */
@@ -70,7 +86,7 @@ function RoleBadge({ role }: { role: string }) {
 }
 
 /* ─── Main Page ─── */
-export default function AdminDashboardPage({ totalStudents, totalApprovedAchievements, totalActiveReports, recentUsers, recentAchievements, recentReports }: DashboardProps) {
+export default function AdminDashboardPage({ totalStudents, totalApprovedAchievements, totalActiveReports, recentUsers, recentAchievements, recentReports, recentGuides, recentDocuments }: DashboardProps) {
     const [users, setUsers] = useState<UserData[]>(recentUsers || []);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [userToDelete, setUserToDelete] = useState<number | null>(null);
@@ -515,6 +531,76 @@ export default function AdminDashboardPage({ totalStudents, totalApprovedAchieve
                                 <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
                             </Link>
                         </div>
+                    </div>
+                </section>
+
+                {/* ── Co-Guide Management ── */}
+                <section className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div className="px-6 py-5 border-b border-gray-100">
+                        <h2 className="text-lg font-bold text-gray-900">Manajemen Co-Guide</h2>
+                    </div>
+                    <div className="overflow-x-auto min-h-[120px]">
+                        <table className="w-full text-sm table-fixed">
+                            <thead>
+                                <tr className="bg-amber-500">
+                                    <th className="w-1/2 text-left px-6 py-3 text-white font-semibold text-xs uppercase tracking-wider">Judul</th>
+                                    <th className="w-1/4 text-left px-6 py-3 text-white font-semibold text-xs uppercase tracking-wider">Kategori</th>
+                                    <th className="w-1/4 text-left px-6 py-3 text-white font-semibold text-xs uppercase tracking-wider">Level</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {recentGuides && recentGuides.length > 0 ? recentGuides.map((guide) => (
+                                    <tr key={guide.id} className="hover:bg-gray-50 transition-colors">
+                                        <td className="px-6 py-4 font-medium text-gray-900 truncate">{guide.title}</td>
+                                        <td className="px-6 py-4 text-gray-500">{guide.category}</td>
+                                        <td className="px-6 py-4 text-gray-500 capitalize">{guide.level}</td>
+                                    </tr>
+                                )) : (
+                                    <tr><td colSpan={3} className="px-6 py-8 text-center text-gray-500 font-medium">Belum ada Co-Guide</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div className="px-6 py-4 border-t border-gray-50 flex justify-center">
+                        <Link href="/admin/guides" className="text-sm text-gray-500 hover:text-amber-600 font-medium flex items-center gap-1.5 transition-colors">
+                            Lihat Semua Co-Guide
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
+                        </Link>
+                    </div>
+                </section>
+
+                {/* ── Co-Library Management ── */}
+                <section className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div className="px-6 py-5 border-b border-gray-100">
+                        <h2 className="text-lg font-bold text-gray-900">Manajemen Co-Library</h2>
+                    </div>
+                    <div className="overflow-x-auto min-h-[120px]">
+                        <table className="w-full text-sm table-fixed">
+                            <thead>
+                                <tr className="bg-amber-500">
+                                    <th className="w-1/2 text-left px-6 py-3 text-white font-semibold text-xs uppercase tracking-wider">Judul</th>
+                                    <th className="w-1/4 text-left px-6 py-3 text-white font-semibold text-xs uppercase tracking-wider">Tipe</th>
+                                    <th className="w-1/4 text-left px-6 py-3 text-white font-semibold text-xs uppercase tracking-wider">Level</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {recentDocuments && recentDocuments.length > 0 ? recentDocuments.map((doc) => (
+                                    <tr key={doc.id} className="hover:bg-gray-50 transition-colors">
+                                        <td className="px-6 py-4 font-medium text-gray-900 truncate">{doc.title}</td>
+                                        <td className="px-6 py-4 text-gray-500 capitalize">{doc.type}</td>
+                                        <td className="px-6 py-4 text-gray-500 capitalize">{doc.level}</td>
+                                    </tr>
+                                )) : (
+                                    <tr><td colSpan={3} className="px-6 py-8 text-center text-gray-500 font-medium">Belum ada Co-Library</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div className="px-6 py-4 border-t border-gray-50 flex justify-center">
+                        <Link href="/admin/library" className="text-sm text-gray-500 hover:text-amber-600 font-medium flex items-center gap-1.5 transition-colors">
+                            Lihat Semua Co-Library
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
+                        </Link>
                     </div>
                 </section>
 

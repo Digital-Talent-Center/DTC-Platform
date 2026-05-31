@@ -5,6 +5,8 @@ use Inertia\Inertia;
 use App\Http\Controllers\AchievementController;
 use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\GuideController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\UsersController;
 use App\Http\Middleware\IsAdmin;
@@ -79,6 +81,16 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/admin/students', [UsersController::class, 'store'])->name('admin.students.store');
         Route::put('/admin/students/{id}', [UsersController::class, 'update'])->name('admin.students.update');
         Route::delete('/admin/students/{id}', [UsersController::class, 'destroy'])->name('admin.students.destroy');
+
+        // Co-Guide management
+        Route::get('/admin/guides', [GuideController::class, 'adminIndex'])->name('admin.guides');
+        Route::post('/admin/guides', [GuideController::class, 'adminStore'])->name('admin.guides.store');
+        Route::delete('/admin/guides/{guide}', [GuideController::class, 'adminDestroy'])->name('admin.guides.destroy');
+
+        // Co-Library management
+        Route::get('/admin/library', [DocumentController::class, 'adminIndex'])->name('admin.library');
+        Route::post('/admin/library', [DocumentController::class, 'adminStore'])->name('admin.library.store');
+        Route::delete('/admin/library/{document}', [DocumentController::class, 'adminDestroy'])->name('admin.library.destroy');
     });
 });
 
