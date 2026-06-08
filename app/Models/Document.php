@@ -28,6 +28,8 @@ class Document extends Model
 
     protected $casts = [
         'year' => 'integer',
+        'views_count' => 'integer',
+        'downloads_count' => 'integer',
         'is_public' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',

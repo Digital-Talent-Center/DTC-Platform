@@ -50,7 +50,7 @@ class GuideController extends Controller
             'title'       => 'required|string|max:255',
             'description' => 'nullable|string|max:5000',
             'category'    => 'nullable|string|max:100',
-            'level'       => 'nullable|in:beginner,intermediate,advanced',
+            'level'       => 'nullable|in:Belmawa,Mandiri',
             'year'        => 'nullable|integer|min:1900|max:' . now()->year,
             'tags'        => 'nullable|string|max:255',
             'file'        => 'required|file|mimes:pdf|max:10240',
