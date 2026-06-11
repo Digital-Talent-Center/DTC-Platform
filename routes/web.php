@@ -25,6 +25,10 @@ Route::middleware(['auth'])->group(function () {
         return Inertia::render('profile');
     })->name('profile.show');
 
+    Route::get('profile/edit', function () {
+        return Inertia::render('profile-edit');
+    })->name('profile.edit');
+
     Route::get('profile/{hash}', function ($hash) {
         $decoded = base64_decode($hash);
         if (str_starts_with($decoded, 'user_')) {
@@ -37,10 +41,6 @@ Route::middleware(['auth'])->group(function () {
         }
         return abort(404);
     })->name('profile.show.user');
-
-    Route::get('profile/edit', function () {
-        return Inertia::render('profile-edit');
-    })->name('profile.edit');
 
     Route::get('dashboard/activities', [ActivityController::class, 'page'])
         ->name('dashboard.activities');

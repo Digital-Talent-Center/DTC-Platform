@@ -5,6 +5,7 @@ import { type SharedData } from '@/types';
 import axios from 'axios';
 
 const BP_INJECT = 'https://cdn.botpress.cloud/webchat/v3.6/inject.js';
+const BP_CONFIG = 'https://files.bpcontent.cloud/2026/06/09/06/20260609062352-RVLJACWF.js';
 
 // Hardcoded config extracted from the provided script URL
 const BP_BOT_ID = "f0e8050a-1996-4989-b0ca-13d1c897145c";
@@ -231,32 +232,33 @@ export default function ChatbotPage() {
     setStarted(true);
     setStatus('loading');
 
-    const initBp = () => {
-      if (window.botpress) {
-        window.botpress.init({
-          botId: BP_BOT_ID,
-          clientId: BP_CLIENT_ID,
-          configuration: {
-            website: {}, email: {}, phone: {}, termsOfService: {}, privacyPolicy: {}
-          }
-        });
-        
-        const shadowPoll = (m = 0) => {
-          const fabRoot = document.getElementById('fab-root');
-          const container = document.getElementById('bp-container');
-          if (fabRoot && container && fabRoot.parentElement !== container) {
-             container.appendChild(fabRoot);
-          }
-          if (injectIntoShadow()) {
-             window.botpress?.open();
-             setStatus('ready');
-             
-             // Wait a moment for Botpress to generate ID and save to LocalStorage, then sync
-             setTimeout(syncConversation, 1500);
-             return;
-          }
-          if (m < 40) setTimeout(() => shadowPoll(m + 1), 250);
-        };
+    const bootBotpressWithConfig = () => {
+      const shadowPoll = (m = 0) => {
+        const fabRoot = document.getElementById('fab-root');
+        const container = document.getElementById('bp-container');
+        if (fabRoot && container && fabRoot.parentElement !== container) {
+           container.appendChild(fabRoot);
+        }
+        if (injectIntoShadow()) {
+           window.botpress?.open();
+           setStatus('ready');
+           
+           // Wait a moment for Botpress to generate ID and save to LocalStorage, then sync
+           setTimeout(syncConversation, 1500);
+           return;
+        }
+        if (m < 40) setTimeout(() => shadowPoll(m + 1), 250);
+      };
+
+      // Load their custom config script which automatically calls window.botpress.init()
+      if (!document.getElementById('bp-config')) {
+        const c = document.createElement('script');
+        c.id = 'bp-config';
+        c.src = BP_CONFIG;
+        c.defer = true;
+        c.onload = () => shadowPoll();
+        document.head.appendChild(c);
+      } else {
         shadowPoll();
       }
     };
@@ -266,11 +268,11 @@ export default function ChatbotPage() {
       s.id = 'bp-inject';
       s.src = BP_INJECT;
       s.async = true;
-      s.onload = initBp;
+      s.onload = bootBotpressWithConfig;
       s.onerror = () => setStatus('error');
       document.head.appendChild(s);
     } else {
-      initBp();
+      bootBotpressWithConfig();
     }
   };
 
