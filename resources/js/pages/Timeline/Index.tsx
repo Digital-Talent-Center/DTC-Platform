@@ -71,6 +71,19 @@ export default function TimelineIndex() {
   const [error, setError] = useState<string | null>(null);
   const [commentInputs, setCommentInputs] = useState<Record<number, string>>({});
 
+  const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+  let userIdParam = urlParams.get('user');
+  if (userIdParam) {
+    try {
+      const decoded = atob(userIdParam);
+      if (decoded.startsWith('user_')) {
+        userIdParam = decoded.replace('user_', '');
+      }
+    } catch (e) {
+      // keep original if not base64
+    }
+  }
+
   // Media attachments & tags
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState('');
@@ -100,7 +113,7 @@ export default function TimelineIndex() {
       try {
         setLoading(true);
         // Load posts
-        const postsResponse = await api.posts.list(1, 10);
+        const postsResponse = await api.posts.list(1, 10, userIdParam ? { user_id: Number(userIdParam) } : undefined);
         const postsList = Array.isArray(postsResponse.data) ? postsResponse.data : (postsResponse.data as any).data || [];
         
         setPosts(postsList.map((p: any) => ({
@@ -109,15 +122,17 @@ export default function TimelineIndex() {
         })));
 
         // Load profile
-        const profileResponse = await api.profile.get();
+        const profileResponse = userIdParam ? await api.profile.getUser(Number(userIdParam)) : await api.profile.get();
         setProfile(profileResponse.data);
 
         // Load recent activities
-        try {
-          const activitiesResponse = await api.activities.list();
-          setRecentActivities(activitiesResponse.data.slice(0, 5));
-        } catch (actErr) {
-          console.error('Failed to load recent activities:', actErr);
+        if (!userIdParam) {
+          try {
+            const activitiesResponse = await api.activities.list();
+            setRecentActivities(activitiesResponse.data.slice(0, 5));
+          } catch (actErr) {
+            console.error('Failed to load recent activities:', actErr);
+          }
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load data');
@@ -133,7 +148,7 @@ export default function TimelineIndex() {
   const getProfileUrl = (id?: number) => {
     if (!id) return '#';
     const myId = profile?.userId || profile?.user?.id;
-    return myId === id ? '/profile' : `/profile/${id}`;
+    return myId === id ? '/profile' : `/profile/${btoa('user_' + id)}`;
   };
 
   const toggleLike = async (postId: number) => {
@@ -322,8 +337,9 @@ export default function TimelineIndex() {
     <AppLayout>
       <Head title="Timeline" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className={userIdParam ? "flex flex-col items-center" : "grid grid-cols-1 lg:grid-cols-12 gap-6"}>
           {/* Left Sidebar - Profile */}
+          {!userIdParam && (
           <div className="lg:col-span-3 space-y-5">
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
               <div className="h-20 bg-gradient-to-r from-amber-400 to-amber-500" />
@@ -369,10 +385,26 @@ export default function TimelineIndex() {
               </div>
             </div>
           </div>
+          )}
 
           {/* Center Feed */}
-          <div className="lg:col-span-6 space-y-5">
+          <div className={`space-y-5 ${userIdParam ? 'w-full max-w-2xl' : 'lg:col-span-6'}`}>
+            {userIdParam && (
+              <div className="mb-2">
+                <Link 
+                  href={`/profile/${btoa('user_' + userIdParam)}`} 
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-amber-600 transition-colors bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                  Back to Profile
+                </Link>
+              </div>
+            )}
+
             {/* Create Post */}
+            {!userIdParam && (
             <div className="bg-white rounded-2xl border border-gray-100 p-5">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-xs font-bold overflow-hidden">
@@ -519,6 +551,7 @@ export default function TimelineIndex() {
                 </button>
               </div>
             </div>
+            )}
 
             {/* Loading State */}
             {loading && (
@@ -746,6 +779,7 @@ export default function TimelineIndex() {
           </div>
 
           {/* Right Sidebar */}
+          {!userIdParam && (
           <div className="lg:col-span-3 space-y-5">
             <div className="bg-white rounded-2xl border border-gray-100 p-5">
               <div className="flex items-center justify-between mb-4">
@@ -789,6 +823,7 @@ export default function TimelineIndex() {
               </Link>
             </div>
           </div>
+          )}
         </div>
       </div>
 

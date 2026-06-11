@@ -25,6 +25,7 @@ export default function Header() {
   const navLinks = [
     { href: '/dashboard', label: 'DASHBOARD' },
     { href: '/timeline', label: 'TIMELINE' },
+    { href: '/chatbot', label: 'CHATBOT' },
     ...(isAdmin ? [{ href: '/admin/dashboard', label: 'ADMIN DASHBOARD', isAdmin: true }] : []),
   ];
 

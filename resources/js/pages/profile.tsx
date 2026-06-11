@@ -208,7 +208,7 @@ export default function ProfilePage({ userId }: { userId?: string | number }) {
             <div className={`bg-white rounded-2xl border border-gray-100 p-6 ${isOwnProfile ? 'mt-6' : ''}`}>
               <div className="flex items-center justify-between mb-5">
                 <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2"><span className="w-1 h-5 bg-amber-500 rounded-full" />{isOwnProfile ? 'My Posts' : 'Posts'}</h2>
-                <Link href={`/timeline?user=${targetUserId}`} className="text-xs text-amber-600 hover:text-amber-700 font-medium">View all</Link>
+                <Link href={`/timeline?user=${btoa('user_' + targetUserId)}`} className="text-xs text-amber-600 hover:text-amber-700 font-medium">View all</Link>
               </div>
               
               {loadingPosts ? (
@@ -249,13 +249,36 @@ export default function ProfilePage({ userId }: { userId?: string | number }) {
                         </div>
                       </div>
                       <p className="text-sm text-gray-600 line-clamp-3 mb-3">{post.content}</p>
-                      {post.imageUrl && (
-                        post.imageUrl.match(/\.(mp4|webm|ogg)$/i) ? (
-                          <video src={post.imageUrl} controls className="w-full h-40 object-cover rounded-xl border border-gray-100 mb-3" />
-                        ) : (
-                          <img src={post.imageUrl} alt="Post media" className="w-full h-40 object-cover rounded-xl border border-gray-100 mb-3" />
-                        )
-                      )}
+                      {(() => {
+                        const localMedia = (post as any).localMedia || (typeof window !== 'undefined' ? localStorage.getItem(`post_media_${post.id}`) : null);
+                        const localMediaType = (post as any).localMediaType || (typeof window !== 'undefined' ? localStorage.getItem(`post_media_type_${post.id}`) : null);
+                        
+                        const mediaUrl = localMedia || post.imageUrl || (post as any).image_url;
+                        if (!mediaUrl) return null;
+                        
+                        const isVideo = localMediaType === 'video' || 
+                                        (!localMedia && mediaUrl.match(/\.(mp4|webm|ogg)$/i)) ||
+                                        mediaUrl.startsWith('data:video/') ||
+                                        mediaUrl.includes('mov_bbb.mp4');
+
+                        if (isVideo) {
+                          return (
+                            <video 
+                              src={mediaUrl} 
+                              controls
+                              className="w-full h-40 object-cover rounded-xl border border-gray-100 mb-3"
+                            />
+                          );
+                        } else {
+                          return (
+                            <img 
+                              src={mediaUrl} 
+                              alt="Post media" 
+                              className="w-full h-40 object-cover rounded-xl border border-gray-100 mb-3"
+                            />
+                          );
+                        }
+                      })()}
                       <div className="flex items-center gap-4 text-xs text-gray-500">
                         <span className="flex items-center gap-1.5">
                           <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
