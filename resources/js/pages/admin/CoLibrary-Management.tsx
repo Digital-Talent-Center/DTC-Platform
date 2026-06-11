@@ -23,14 +23,22 @@ interface Props {
     total: number;
 }
 
-const emptyForm = { title: '', description: '', type: 'resource', category: 'co-library', competition: '', level: '', year: '', tags: '' };
+const emptyForm = { title: '', description: '', type: 'resource', category: '', competition: '', level: '', year: '', tags: '' };
 
 function LevelBadge({ level }: { level: string | null }) {
     if (!level) return <span className="text-gray-400 text-xs">-</span>;
-    const cls = level === 'beginner' ? 'bg-blue-100 text-blue-700'
-        : level === 'intermediate' ? 'bg-amber-100 text-amber-700'
+    const cls = level === 'Universitas' ? 'bg-blue-100 text-blue-700'
+        : level === 'Regional' ? 'bg-amber-100 text-amber-700'
+        : level === 'Nasional' ? 'bg-purple-100 text-purple-700'
         : 'bg-red-100 text-red-700';
     return <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold tracking-wide capitalize ${cls}`}>{level}</span>;
+}
+
+function CategoryBadge({ category }: { category: string | null }) {
+    if (!category) return <span className="text-gray-400 text-xs">-</span>;
+    const cls = category === 'Belmawa' ? 'bg-blue-100 text-blue-700'
+        : 'bg-green-100 text-green-700';
+    return <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold tracking-wide capitalize ${cls}`}>{category}</span>;
 }
 
 export default function CoLibraryManagement({ initialDocuments, total }: Props) {
@@ -127,10 +135,11 @@ export default function CoLibraryManagement({ initialDocuments, total }: Props) 
                         <table className="w-full table-fixed text-sm">
                             <thead>
                                 <tr className="bg-[#fbbf24]">
-                                    <th className="text-left w-[38%] px-8 py-4 text-gray-900 font-bold text-xs uppercase tracking-wider">Judul</th>
-                                    <th className="text-left w-[16%] px-8 py-4 text-gray-900 font-bold text-xs uppercase tracking-wider">Tipe</th>
-                                    <th className="text-left w-[16%] px-8 py-4 text-gray-900 font-bold text-xs uppercase tracking-wider">Level</th>
-                                    <th className="text-left w-[16%] px-8 py-4 text-gray-900 font-bold text-xs uppercase tracking-wider">Unduhan</th>
+                                    <th className="text-left w-[28%] px-8 py-4 text-gray-900 font-bold text-xs uppercase tracking-wider">Judul</th>
+                                    <th className="text-left w-[15%] px-8 py-4 text-gray-900 font-bold text-xs uppercase tracking-wider">Kategori</th>
+                                    <th className="text-left w-[15%] px-8 py-4 text-gray-900 font-bold text-xs uppercase tracking-wider">Level</th>
+                                    <th className="text-left w-[14%] px-8 py-4 text-gray-900 font-bold text-xs uppercase tracking-wider">Unduhan</th>
+                                    <th className="text-left w-[14%] px-8 py-4 text-gray-900 font-bold text-xs uppercase tracking-wider">Views</th>
                                     <th className="text-left w-[14%] px-8 py-4 text-gray-900 font-bold text-xs uppercase tracking-wider">Aksi</th>
                                 </tr>
                             </thead>
@@ -139,11 +148,11 @@ export default function CoLibraryManagement({ initialDocuments, total }: Props) 
                                     <tr key={doc.id} className="hover:bg-gray-50/50 transition-colors">
                                         <td className="px-8 py-4">
                                             <p className="font-bold text-gray-900 line-clamp-1">{doc.title}</p>
-                                            <p className="text-xs text-gray-500 mt-0.5">{doc.category || 'co-library'}</p>
                                         </td>
-                                        <td className="px-8 py-4 text-gray-600 text-sm capitalize">{doc.type || '-'}</td>
+                                        <td className="px-8 py-4"><CategoryBadge category={doc.category} /></td>
                                         <td className="px-8 py-4"><LevelBadge level={doc.level} /></td>
-                                        <td className="px-8 py-4 text-gray-500 text-sm">{doc.downloads_count} unduhan</td>
+                                        <td className="px-8 py-4 text-gray-500 text-sm">{doc.downloads_count}</td>
+                                        <td className="px-8 py-4 text-gray-500 text-sm">{doc.views_count}</td>
                                         <td className="px-8 py-4">
                                             <div className="flex items-center gap-4">
                                                 <button onClick={() => handleView(doc)} className="text-gray-400 hover:text-gray-700 transition-colors cursor-pointer" title="Lihat File">
@@ -220,6 +229,16 @@ export default function CoLibraryManagement({ initialDocuments, total }: Props) 
                                 {createErrors.type && <p className="text-xs text-red-500">{createErrors.type}</p>}
                             </div>
                             <div className="flex flex-col gap-1">
+                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Kategori</label>
+                                <select value={createForm.category} onChange={e => setCreateForm(f => ({ ...f, category: e.target.value }))}
+                                    className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 capitalize cursor-pointer">
+                                    <option value="">Pilih kategori</option>
+                                    <option value="Belmawa">Belmawa</option>
+                                    <option value="Mandiri">Mandiri</option>
+                                </select>
+                                {createErrors.category && <p className="text-xs text-red-500">{createErrors.category}</p>}
+                            </div>
+                            <div className="flex flex-col gap-1">
                                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Kompetisi</label>
                                 <input type="text" value={createForm.competition} onChange={e => setCreateForm(f => ({ ...f, competition: e.target.value }))}
                                     className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="mis. ICPC (opsional)" />
@@ -230,9 +249,10 @@ export default function CoLibraryManagement({ initialDocuments, total }: Props) 
                                 <select value={createForm.level} onChange={e => setCreateForm(f => ({ ...f, level: e.target.value }))}
                                     className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 capitalize cursor-pointer">
                                     <option value="">Pilih level</option>
-                                    <option value="beginner">Beginner</option>
-                                    <option value="intermediate">Intermediate</option>
-                                    <option value="advanced">Advanced</option>
+                                    <option value="Universitas">Universitas</option>
+                                    <option value="Regional">Regional</option>
+                                    <option value="Nasional">Nasional</option>
+                                    <option value="Internasional">Internasional</option>
                                 </select>
                                 {createErrors.level && <p className="text-xs text-red-500">{createErrors.level}</p>}
                             </div>
@@ -242,7 +262,7 @@ export default function CoLibraryManagement({ initialDocuments, total }: Props) 
                                     className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="mis. 2024" />
                                 {createErrors.year && <p className="text-xs text-red-500">{createErrors.year}</p>}
                             </div>
-                            <div className="flex flex-col gap-1 col-span-2">
+                            <div className="flex flex-col gap-1">
                                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Tags (pisahkan koma)</label>
                                 <input type="text" value={createForm.tags} onChange={e => setCreateForm(f => ({ ...f, tags: e.target.value }))}
                                     className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="struktur-data, ringkasan" />

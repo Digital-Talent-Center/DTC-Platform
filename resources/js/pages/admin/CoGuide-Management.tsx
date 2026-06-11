@@ -25,8 +25,8 @@ const emptyForm = { title: '', description: '', category: '', level: '', year: '
 
 function LevelBadge({ level }: { level: string | null }) {
     if (!level) return <span className="text-gray-400 text-xs">-</span>;
-    const cls = level === 'beginner' ? 'bg-blue-100 text-blue-700'
-        : level === 'intermediate' ? 'bg-amber-100 text-amber-700'
+    const cls = level === 'Belmawa' ? 'bg-blue-100 text-blue-700'
+        : level === 'Mandiri' ? 'bg-amber-100 text-amber-700'
         : 'bg-red-100 text-red-700';
     return <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold tracking-wide capitalize ${cls}`}>{level}</span>;
 }
@@ -220,9 +220,8 @@ export default function CoGuideManagement({ initialGuides, total }: Props) {
                                 <select value={createForm.level} onChange={e => setCreateForm(f => ({ ...f, level: e.target.value }))}
                                     className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 capitalize cursor-pointer">
                                     <option value="">Pilih level</option>
-                                    <option value="beginner">Beginner</option>
-                                    <option value="intermediate">Intermediate</option>
-                                    <option value="advanced">Advanced</option>
+                                    <option value="Belmawa">Belmawa</option>
+                                    <option value="Mandiri">Mandiri</option>
                                 </select>
                                 {createErrors.level && <p className="text-xs text-red-500">{createErrors.level}</p>}
                             </div>
