@@ -45,8 +45,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('dashboard/activities', [ActivityController::class, 'page'])
         ->name('dashboard.activities');
 
-    Route::post('logout', [LoginController::class, 'logout'])->name('logout');
-
     Route::get('/api/chat-sessions', [App\Http\Controllers\ChatSessionController::class, 'index']);
     Route::post('/api/chat-sessions', [App\Http\Controllers\ChatSessionController::class, 'store']);
     Route::delete('/api/chat-sessions/all', [App\Http\Controllers\ChatSessionController::class, 'destroyAll']);
