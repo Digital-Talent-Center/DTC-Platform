@@ -20,13 +20,15 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         // Share web middleware (session + CSRF) with API routes
-        // This allows API routes to use cookie-based auth from the same SPA
+        // This allows API routes to use cookie-based auth from the same SPA.
+        // CSRF dipakai versi yang melewati pemeriksaan untuk request Bearer token
+        // (klien mobile Sanctum), sementara SPA browser tetap dilindungi CSRF.
         $middleware->api(prepend: [
             \Illuminate\Cookie\Middleware\EncryptCookies::class,
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
             \Illuminate\Session\Middleware\StartSession::class,
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
-            \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
+            \App\Http\Middleware\VerifyCsrfTokenExceptApi::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
