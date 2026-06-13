@@ -23,7 +23,7 @@ class Activity extends Model
 
     protected $casts = [
         'activity_date' => 'date',
-        'deadline' => 'date',
+        'deadline' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -85,7 +85,18 @@ class Activity extends Model
     public function scopeOverdue($query)
     {
         return $query->where('status', 'pending')
-            ->where('activity_date', '<', now()->toDateString());
+            ->where(function ($q) {
+                $q->where(function ($q2) {
+                    // Tasks: check deadline datetime
+                    $q2->where('type', 'task')
+                       ->whereNotNull('deadline')
+                       ->where('deadline', '<', now());
+                })->orWhere(function ($q2) {
+                    // Events: check activity_date (date-only, so compare by date)
+                    $q2->where('type', 'event')
+                       ->where('activity_date', '<', now()->toDateString());
+                });
+            });
     }
 
     /**
@@ -192,12 +203,12 @@ class Activity extends Model
     }
 
     public function isOverdue(): bool
-{
+    {
         if ($this->type !== 'task') return false;
 
         return $this->deadline
             && $this->status !== 'completed'
-            && now()->toDateString() > $this->deadline->toDateString();
+            && now()->greaterThan($this->deadline);
     }
 
     public function isEventPast(): bool

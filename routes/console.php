@@ -15,7 +15,7 @@ Schedule::call(function () {
     Activity::where('type', 'task')
         ->whereNotIn('status', ['completed', 'cancelled', 'overdue'])
         ->whereNotNull('deadline')
-        ->whereDate('deadline', '<', now()->toDateString())
+        ->where('deadline', '<', now())
         ->update(['status' => 'overdue']);
 
 })->everyMinute();
