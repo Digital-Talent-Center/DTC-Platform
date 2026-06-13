@@ -73,8 +73,13 @@ class CommentController extends Controller
      */
     public function destroy(Post $post, Comment $comment)
     {
-        // Authorize user
-        if ($comment->user_id !== Auth::id()) {
+        // Verify comment belongs to post
+        if ($comment->post_id !== $post->id) {
+            return $this->messageResponse('Comment does not belong to this post', 404);
+        }
+
+        // Authorize user (comment owner or post owner)
+        if ($comment->user_id !== Auth::id() && $post->user_id !== Auth::id()) {
             return $this->messageResponse('Unauthorized', 403);
         }
 

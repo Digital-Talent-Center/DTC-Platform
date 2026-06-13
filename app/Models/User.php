@@ -147,4 +147,12 @@ class User extends Authenticatable
     {
         return $this->customNotifications()->unread()->count();
     }
+
+    /**
+     * Get all chat sessions for this user
+     */
+    public function chatSessions(): HasMany
+    {
+        return $this->hasMany(ChatSession::class)->latest('updated_at');
+    }
 }

@@ -25,16 +25,32 @@ Route::middleware(['auth'])->group(function () {
         return Inertia::render('profile');
     })->name('profile.show');
 
-    Route::get('profile/{id}', function ($id) {
-        return Inertia::render('profile', ['userId' => $id]);
-    })->name('profile.show.user')->where('id', '[0-9]+');
-
     Route::get('profile/edit', function () {
         return Inertia::render('profile-edit');
     })->name('profile.edit');
 
+    Route::get('profile/{hash}', function ($hash) {
+        $decoded = base64_decode($hash);
+        if (str_starts_with($decoded, 'user_')) {
+            $id = str_replace('user_', '', $decoded);
+            return Inertia::render('profile', ['userId' => $id]);
+        }
+        // Fallback for numeric IDs
+        if (is_numeric($hash)) {
+            return Inertia::render('profile', ['userId' => $hash]);
+        }
+        return abort(404);
+    })->name('profile.show.user');
+
     Route::get('dashboard/activities', [ActivityController::class, 'page'])
         ->name('dashboard.activities');
+
+    Route::post('logout', [LoginController::class, 'logout'])->name('logout');
+
+    Route::get('/api/chat-sessions', [App\Http\Controllers\ChatSessionController::class, 'index']);
+    Route::post('/api/chat-sessions', [App\Http\Controllers\ChatSessionController::class, 'store']);
+    Route::delete('/api/chat-sessions/all', [App\Http\Controllers\ChatSessionController::class, 'destroyAll']);
+    Route::delete('/api/chat-sessions/{chatSession}', [App\Http\Controllers\ChatSessionController::class, 'destroy']);
 
     Route::post('/activities', [ActivityController::class, 'store'])
         ->name('activities.store');
@@ -66,6 +82,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('timeline', function () {
         return Inertia::render('Timeline/Index');
     })->name('timeline');
+
+    Route::get('chatbot', function () {
+        return Inertia::render('chatbot');
+    })->name('chatbot');
 
     // Admin Routes
     Route::middleware([IsAdmin::class])->group(function () {

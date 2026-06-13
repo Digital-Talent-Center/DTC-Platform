@@ -94,7 +94,7 @@ export default function ReportListPage({ initialReports, pendingCount }: Props) 
                                     <div className="flex items-start gap-4 mb-6">
                                         <div className="w-11 h-11 rounded-full overflow-hidden flex-shrink-0">
                                             {report.userId ? (
-                                                <Link href={`/profile/${report.userId}`} className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-400 to-slate-600 text-white text-sm font-bold hover:opacity-90 transition-opacity">
+                                                <Link href={`/profile/${btoa('user_' + report.userId)}`} className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-400 to-slate-600 text-white text-sm font-bold hover:opacity-90 transition-opacity">
                                                     {report.avatar}
                                                 </Link>
                                             ) : (
@@ -106,7 +106,7 @@ export default function ReportListPage({ initialReports, pendingCount }: Props) 
                                         <div>
                                             <h3 className="font-bold text-gray-900 text-[15px]">
                                                 {report.userId ? (
-                                                    <Link href={`/profile/${report.userId}`} className="hover:text-amber-600 hover:underline">
+                                                    <Link href={`/profile/${btoa('user_' + report.userId)}`} className="hover:text-amber-600 hover:underline">
                                                         {report.user}
                                                     </Link>
                                                 ) : (
