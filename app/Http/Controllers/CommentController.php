@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Post;
 use App\Models\Comment;
 use App\Models\Like;
+use App\Services\FcmService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -40,6 +41,30 @@ class CommentController extends Controller
         ]);
 
         $post->updateCommentsCount();
+
+        // Kirim notifikasi FCM ke pemilik post (jika bukan komentar sendiri).
+        if ($post->user_id !== Auth::id()) {
+            try {
+                $postOwner = $post->user;
+                $actorName = Auth::user()->name ?? 'Seseorang';
+                $preview   = mb_substr($validated['content'], 0, 80);
+                $fcm = new FcmService();
+                $fcm->sendToUser(
+                    $postOwner,
+                    'Komentar baru',
+                    "{$actorName} mengomentari postingan kamu: {$preview}",
+                    [
+                        'type'            => 'POST_COMMENTED',
+                        'post_id'         => (string) $post->id,
+                        'actor_name'      => $actorName,
+                        'comment_preview' => $preview,
+                    ],
+                    'SYSTEM',
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('[FCM] comment notification error: ' . $e->getMessage());
+            }
+        }
 
         return $this->apiResponse($comment->load('user.profileExtension'), 'Comment created successfully', 201);
     }

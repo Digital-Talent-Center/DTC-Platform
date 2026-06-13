@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Achievement;
+use App\Services\FcmService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -138,6 +139,8 @@ class AchievementController extends Controller
             return $this->messageResponse('Unauthorized', 403);
         }
 
+        $oldStatus = $achievement->status;
+
         $validated = $request->validate([
             'title' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
@@ -148,6 +151,12 @@ class AchievementController extends Controller
         ]);
 
         $achievement->update($validated);
+
+        // Kirim notifikasi FCM jika status berubah ke approved/rejected.
+        $newStatus = $validated['status'] ?? $oldStatus;
+        if ($newStatus !== $oldStatus && in_array($newStatus, ['approved', 'rejected'])) {
+            $this->sendAchievementNotification($achievement, $newStatus);
+        }
 
         return $this->apiResponse($achievement, 'Achievement updated successfully');
     }
@@ -206,9 +215,48 @@ class AchievementController extends Controller
 
         try {
             $achievement->update(['status' => $validated['status']]);
+
+            // Kirim notifikasi FCM ke pemilik achievement.
+            $this->sendAchievementNotification($achievement, $validated['status']);
+
             return back()->with('success', 'Status pencapaian berhasil diperbarui.');
         } catch (\Exception $e) {
             return back()->withErrors(['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Kirim notifikasi FCM saat achievement di-approve atau di-reject.
+     */
+    private function sendAchievementNotification(Achievement $achievement, string $status): void
+    {
+        try {
+            $owner = $achievement->user;
+            if (!$owner) return;
+
+            if ($status === 'approved') {
+                $title = 'Achievement diterima';
+                $body  = 'Achievement kamu berhasil disetujui.';
+                $type  = 'ACHIEVEMENT_APPROVED';
+            } else {
+                $title = 'Achievement ditolak';
+                $body  = 'Achievement kamu ditolak. Silakan cek alasan penolakan.';
+                $type  = 'ACHIEVEMENT_REJECTED';
+            }
+
+            $fcm = new FcmService();
+            $fcm->sendToUser(
+                $owner,
+                $title,
+                $body,
+                [
+                    'type'           => $type,
+                    'achievement_id' => (string) $achievement->id,
+                ],
+                'ACHIEVEMENT',
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('[FCM] achievement notification error: ' . $e->getMessage());
         }
     }
 

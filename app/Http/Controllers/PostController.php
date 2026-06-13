@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Post;
 use App\Models\Like;
+use App\Services\FcmService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -100,16 +101,44 @@ class PostController extends Controller
     }
 
     /**
-     * Delete post
+     * Delete post — pemilik post ATAU admin boleh menghapus.
+     * Jika admin yang menghapus, kirim notifikasi ke pemilik post.
      */
-    public function destroy(Post $post)
+    public function destroy(Request $request, Post $post)
     {
-        // Authorize user
-        if ($post->user_id !== Auth::id()) {
+        $authUser = Auth::user();
+        $isOwner  = $post->user_id === $authUser->id;
+        $isAdmin  = $authUser->isAdmin();
+
+        if (!$isOwner && !$isAdmin) {
             return $this->messageResponse('Unauthorized', 403);
         }
 
+        // Simpan data yang diperlukan sebelum post dihapus.
+        $postOwner = $post->user;
+        $reason    = $request->input('reason', 'Melanggar aturan komunitas');
+
         $post->delete();
+
+        // Kirim notifikasi FCM ke pemilik post jika dihapus oleh admin.
+        if ($isAdmin && !$isOwner && $postOwner) {
+            try {
+                $fcm = new FcmService();
+                $fcm->sendToUser(
+                    $postOwner,
+                    'Postingan dihapus',
+                    "Postingan kamu dihapus karena {$reason}.",
+                    [
+                        'type'   => 'POST_DELETED_BY_ADMIN',
+                        'reason' => $reason,
+                    ],
+                    'SYSTEM',
+                );
+            } catch (\Throwable $e) {
+                // Jangan gagalkan response jika notifikasi gagal dikirim.
+                \Illuminate\Support\Facades\Log::warning('[FCM] destroy notification error: ' . $e->getMessage());
+            }
+        }
 
         return $this->messageResponse('Post deleted successfully');
     }
@@ -139,6 +168,28 @@ class PostController extends Controller
         }
 
         $post->updateLikesCount();
+
+        // Kirim notifikasi FCM saat like (bukan unlike) dan bukan like sendiri.
+        if ($isLiked && $post->user_id !== $userId) {
+            try {
+                $postOwner = $post->user;
+                $actorName = Auth::user()->name ?? 'Seseorang';
+                $fcm = new FcmService();
+                $fcm->sendToUser(
+                    $postOwner,
+                    'Postingan kamu disukai',
+                    "{$actorName} menyukai postingan kamu.",
+                    [
+                        'type'       => 'POST_LIKED',
+                        'post_id'    => (string) $post->id,
+                        'actor_name' => $actorName,
+                    ],
+                    'SYSTEM',
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('[FCM] toggleLike notification error: ' . $e->getMessage());
+            }
+        }
 
         return response()->json([
             'isLiked' => $isLiked,

@@ -149,6 +149,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get all FCM device tokens for this user (push notifications)
+     */
+    public function fcmTokens(): HasMany
+    {
+        return $this->hasMany(FcmToken::class);
+    }
+
+    /**
      * Get all chat sessions for this user
      */
     public function chatSessions(): HasMany
