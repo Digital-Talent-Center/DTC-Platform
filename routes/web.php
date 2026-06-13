@@ -15,6 +15,22 @@ Route::get('/', function () {
     return Inertia::render('welcome');
 })->name('home');
 
+Route::get('privacy-policy', function () {
+    return Inertia::render('privacy-policy');
+})->name('privacy-policy');
+
+Route::get('terms-of-service', function () {
+    return Inertia::render('terms-of-service');
+})->name('terms-of-service');
+
+Route::get('help-center', function () {
+    return Inertia::render('help-center');
+})->name('help-center');
+
+Route::get('contact-us', function () {
+    return Inertia::render('contact-us');
+})->name('contact-us');
+
 Route::middleware(['auth'])->group(function () {
 
     Route::get('dashboard', function () {
@@ -84,6 +100,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('chatbot', function () {
         return Inertia::render('chatbot');
     })->name('chatbot');
+
 
     // Admin Routes
     Route::middleware([IsAdmin::class])->group(function () {

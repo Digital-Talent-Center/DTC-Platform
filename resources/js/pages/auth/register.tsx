@@ -150,9 +150,9 @@ export default function Register() {
               <input type="checkbox" required className="w-4 h-4 mt-0.5 rounded border-gray-300 text-amber-500 focus:ring-amber-400" />
               <span className="text-xs text-gray-500 leading-relaxed">
                 I agree to the{' '}
-                <Link href="#" className="font-medium text-amber-600 hover:underline">Terms of Service</Link>
+                <Link href={route('terms-of-service')} className="font-medium text-amber-600 hover:underline">Terms of Service</Link>
                 {' '}and{' '}
-                <Link href="#" className="font-medium text-amber-600 hover:underline">Privacy Policy</Link>
+                <Link href={route('privacy-policy')} className="font-medium text-amber-600 hover:underline">Privacy Policy</Link>
               </span>
             </label>
 

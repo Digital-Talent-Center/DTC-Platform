@@ -2,10 +2,10 @@ import { Link } from '@inertiajs/react';
 
 export default function Footer() {
   const footerLinks = [
-    { label: 'PRIVACY POLICY', href: '#' },
-    { label: 'TERMS OF SERVICE', href: '#' },
-    { label: 'HELP CENTER', href: '#' },
-    { label: 'CONTACT US', href: '#' },
+    { label: 'PRIVACY POLICY', href: route('privacy-policy') },
+    { label: 'TERMS OF SERVICE', href: route('terms-of-service') },
+    { label: 'HELP CENTER', href: route('help-center') },
+    { label: 'CONTACT US', href: route('contact-us') },
   ];
 
   return (
