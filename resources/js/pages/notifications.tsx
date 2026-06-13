@@ -1,6 +1,6 @@
 import { useState, useEffect, ReactNode } from 'react';
 import AppLayout from "@/layouts/app-layout";
-import { Head } from "@inertiajs/react";
+import { Head, Link } from "@inertiajs/react";
 import { api, type Notification } from "@/services/api";
 
 /* ── Category config (colors, icons) ───────────────── */
@@ -203,6 +203,12 @@ export default function NotificationsPage() {
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
           <div>
+            <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 mb-4 transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+              </svg>
+              Back to Dashboard
+            </Link>
             <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight">
               Notifications
             </h1>

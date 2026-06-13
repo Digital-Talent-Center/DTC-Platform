@@ -89,7 +89,7 @@ export default function TimelineIndex() {
   const [imageUrl, setImageUrl] = useState('');
   const [tag, setTag] = useState('');
   const [activeAttachType, setActiveAttachType] = useState<'photo' | 'video' | 'event' | 'article' | null>(null);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -115,7 +115,7 @@ export default function TimelineIndex() {
         // Load posts
         const postsResponse = await api.posts.list(1, 10, userIdParam ? { user_id: Number(userIdParam) } : undefined);
         const postsList = Array.isArray(postsResponse.data) ? postsResponse.data : (postsResponse.data as any).data || [];
-        
+
         setPosts(postsList.map((p: any) => ({
           ...p,
           showComments: false,
@@ -154,13 +154,13 @@ export default function TimelineIndex() {
   const toggleLike = async (postId: number) => {
     try {
       await api.posts.like(postId);
-      setPosts(prev => prev.map(p => 
-        p.id === postId 
-          ? { 
-              ...p, 
-              liked: !p.liked, 
-              likesCount: p.liked ? p.likesCount - 1 : p.likesCount + 1 
-            } 
+      setPosts(prev => prev.map(p =>
+        p.id === postId
+          ? {
+            ...p,
+            liked: !p.liked,
+            likesCount: p.liked ? p.likesCount - 1 : p.likesCount + 1
+          }
           : p
       ));
     } catch (err) {
@@ -169,7 +169,7 @@ export default function TimelineIndex() {
   };
 
   const toggleComments = (postId: number) => {
-    setPosts(prev => prev.map(p => 
+    setPosts(prev => prev.map(p =>
       p.id === postId ? { ...p, showComments: !p.showComments } : p
     ));
   };
@@ -182,9 +182,9 @@ export default function TimelineIndex() {
       await api.comments.create(postId, { content: text });
       // Reload the post to get updated comments
       const updatedPost = await api.posts.get(postId);
-      setPosts(prev => prev.map(p => 
-        p.id === postId 
-          ? { ...updatedPost.data, showComments: true } 
+      setPosts(prev => prev.map(p =>
+        p.id === postId
+          ? { ...updatedPost.data, showComments: true }
           : p
       ));
       setCommentInputs(prev => ({ ...prev, [postId]: '' }));
@@ -199,9 +199,9 @@ export default function TimelineIndex() {
       await api.comments.delete(postId, commentId);
       // Reload the post to get updated comments
       const updatedPost = await api.posts.get(postId);
-      setPosts(prev => prev.map(p => 
-        p.id === postId 
-          ? { ...updatedPost.data, showComments: true } 
+      setPosts(prev => prev.map(p =>
+        p.id === postId
+          ? { ...updatedPost.data, showComments: true }
           : p
       ));
     } catch (err) {
@@ -227,14 +227,14 @@ export default function TimelineIndex() {
         dummyUrl = imageUrl.trim();
       }
 
-      newPost = await api.posts.create({ 
+      newPost = await api.posts.create({
         content: postText,
         image_url: dummyUrl,
         tag: tag.trim() || undefined
       } as any);
-      
+
       const createdData = newPost.data;
-      
+
       // Save local file to localStorage if selected
       if (imageFile && createdData?.id) {
         const reader = new FileReader();
@@ -244,7 +244,7 @@ export default function TimelineIndex() {
             localStorage.setItem(`post_media_${createdData.id}`, base64String);
             localStorage.setItem(`post_media_type_${createdData.id}`, activeAttachType || 'photo');
             // Update posts state to immediately show local media
-            setPosts(prev => prev.map(p => 
+            setPosts(prev => prev.map(p =>
               p.id === createdData.id ? { ...p, localMedia: base64String, localMediaType: activeAttachType } : p
             ));
           } catch (e) {
@@ -253,7 +253,7 @@ export default function TimelineIndex() {
         };
         reader.readAsDataURL(imageFile);
       }
-      
+
       setPosts(prev => [{ ...createdData, showComments: false }, ...prev]);
       setPostText('');
       setImageUrl('');
@@ -340,59 +340,59 @@ export default function TimelineIndex() {
         <div className={userIdParam ? "flex flex-col items-center" : "grid grid-cols-1 lg:grid-cols-12 gap-6"}>
           {/* Left Sidebar - Profile */}
           {!userIdParam && (
-          <div className="lg:col-span-3 space-y-5">
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-              <div className="h-20 bg-gradient-to-r from-amber-400 to-amber-500" />
-              <div className="px-5 pb-5 -mt-8 text-center">
-                <div className="w-16 h-16 mx-auto rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 border-4 border-white shadow-md flex items-center justify-center text-white text-lg font-bold overflow-hidden">
-                  {(profile?.avatarUrl || (profile as any)?.avatar_url) ? <img src={profile?.avatarUrl || (profile as any)?.avatar_url} alt="Avatar" className="w-full h-full object-cover" /> : getInitials(profile?.user?.name || 'AA')}
+            <div className="lg:col-span-3 space-y-5 sticky top-24 self-start">
+              <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                <div className="h-20 bg-gradient-to-r from-amber-400 to-amber-500" />
+                <div className="px-5 pb-5 -mt-8 text-center">
+                  <div className="w-16 h-16 mx-auto rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 border-4 border-white shadow-md flex items-center justify-center text-white text-lg font-bold overflow-hidden">
+                    {(profile?.avatarUrl || (profile as any)?.avatar_url) ? <img src={profile?.avatarUrl || (profile as any)?.avatar_url} alt="Avatar" className="w-full h-full object-cover" /> : getInitials(profile?.user?.name || 'AA')}
+                  </div>
+                  <h3 className="mt-3 text-base font-semibold text-gray-900">{profile?.user?.name || 'User'}</h3>
+                  <p className="text-xs text-gray-400 capitalize">{profile?.role || 'Student'}</p>
+                  <div className="mt-4 pt-4 border-t border-gray-100 space-y-2">
+                    <div className="flex justify-between text-xs"><span className="text-gray-400">TOTAL POSTS</span><span className="font-bold text-amber-600">{profile?.postsCount ?? (profile as any)?.posts_count ?? 0}</span></div>
+                    <div className="flex justify-between text-xs"><span className="text-gray-400">TASK COMPLETED</span><span className="font-bold text-amber-600">{profile?.completedTasksCount ?? (profile as any)?.completed_tasks_count ?? 0}</span></div>
+                  </div>
                 </div>
-                <h3 className="mt-3 text-base font-semibold text-gray-900">{profile?.user?.name || 'User'}</h3>
-                <p className="text-xs text-gray-400 capitalize">{profile?.role || 'Student'}</p>
-                <div className="mt-4 pt-4 border-t border-gray-100 space-y-2">
-                  <div className="flex justify-between text-xs"><span className="text-gray-400">TOTAL POSTS</span><span className="font-bold text-amber-600">{profile?.postsCount ?? (profile as any)?.posts_count ?? 0}</span></div>
-                  <div className="flex justify-between text-xs"><span className="text-gray-400">TASK COMPLETED</span><span className="font-bold text-amber-600">{profile?.completedTasksCount ?? (profile as any)?.completed_tasks_count ?? 0}</span></div>
+              </div>
+              <div className="bg-white rounded-2xl border border-gray-100 p-5">
+                <p className="text-[10px] font-bold tracking-wider text-gray-400 mb-3">BIODATA</p>
+                <div className="space-y-3">
+                  {profile ? (
+                    <>
+                      <div>
+                        <p className="text-[10px] font-semibold tracking-wider text-gray-400">NIM</p>
+                        <p className="text-sm font-medium text-gray-800">{profile.nim || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold tracking-wider text-gray-400">FACULTY</p>
+                        <p className="text-sm font-medium text-gray-800">{profile.faculty || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold tracking-wider text-gray-400">STUDY PROGRAM</p>
+                        <p className="text-sm font-medium text-gray-800">{profile.major || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold tracking-wider text-gray-400">BATCH YEAR</p>
+                        <p className="text-sm font-medium text-gray-800">
+                          {getBatchYear(profile?.nim)}
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-xs text-gray-500">Loading...</p>
+                  )}
                 </div>
               </div>
             </div>
-            <div className="bg-white rounded-2xl border border-gray-100 p-5">
-              <p className="text-[10px] font-bold tracking-wider text-gray-400 mb-3">BIODATA</p>
-              <div className="space-y-3">
-                {profile ? (
-                  <>
-                    <div>
-                      <p className="text-[10px] font-semibold tracking-wider text-gray-400">NIM</p>
-                      <p className="text-sm font-medium text-gray-800">{profile.nim || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-semibold tracking-wider text-gray-400">FACULTY</p>
-                      <p className="text-sm font-medium text-gray-800">{profile.faculty || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-semibold tracking-wider text-gray-400">STUDY PROGRAM</p>
-                      <p className="text-sm font-medium text-gray-800">{profile.major || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-semibold tracking-wider text-gray-400">BATCH YEAR</p>
-                      <p className="text-sm font-medium text-gray-800">
-                        {getBatchYear(profile?.nim)}
-                      </p>
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-xs text-gray-500">Loading...</p>
-                )}
-              </div>
-            </div>
-          </div>
           )}
 
           {/* Center Feed */}
           <div className={`space-y-5 ${userIdParam ? 'w-full max-w-2xl' : 'lg:col-span-6'}`}>
             {userIdParam && (
               <div className="mb-2">
-                <Link 
-                  href={`/profile/${btoa('user_' + userIdParam)}`} 
+                <Link
+                  href={`/profile/${btoa('user_' + userIdParam)}`}
                   className="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-amber-600 transition-colors bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -405,133 +405,133 @@ export default function TimelineIndex() {
 
             {/* Create Post */}
             {!userIdParam && (
-            <div className="bg-white rounded-2xl border border-gray-100 p-5">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-xs font-bold overflow-hidden">
-                  {(profile?.avatarUrl || (profile as any)?.avatar_url) ? <img src={profile?.avatarUrl || (profile as any)?.avatar_url} alt="Avatar" className="w-full h-full object-cover" /> : getInitials(profile?.user?.name || 'AA')}
-                </div>
-                <input 
-                  type="text" 
-                  placeholder="Start a post" 
-                  value={postText} 
-                  onChange={(e) => setPostText(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); createPost(); } }}
-                  className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-full text-sm text-gray-600 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" 
-                />
-              </div>
-
-              {/* Conditional attachment inputs */}
-              {(activeAttachType === 'photo' || activeAttachType === 'video') && (
-                <div className="mt-2 mb-4 p-4 bg-gray-50 rounded-2xl border border-gray-200 flex flex-col gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase">
-                      UPLOAD {activeAttachType === 'photo' ? 'FOTO' : 'VIDEO'} DARI DEVICE
-                    </p>
-                    {(imageFile || imageUrl) && (
-                      <button 
-                        onClick={() => { setImageFile(null); setImageUrl(''); }} 
-                        className="text-xs text-red-500 hover:text-red-600 font-semibold"
-                      >
-                        Hapus
-                      </button>
-                    )}
+              <div className="bg-white rounded-2xl border border-gray-100 p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-xs font-bold overflow-hidden">
+                    {(profile?.avatarUrl || (profile as any)?.avatar_url) ? <img src={profile?.avatarUrl || (profile as any)?.avatar_url} alt="Avatar" className="w-full h-full object-cover" /> : getInitials(profile?.user?.name || 'AA')}
                   </div>
-                  
-                  {/* Clickable Drag & Drop Zone */}
-                  <div 
-                    onClick={() => fileInputRef.current?.click()}
-                    className="border-2 border-dashed border-gray-200 hover:border-amber-400 hover:bg-amber-50/10 rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all duration-200 min-h-[140px] relative overflow-hidden bg-white"
-                  >
-                    <input 
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleFileChange}
-                      accept={activeAttachType === 'photo' ? 'image/*' : 'video/*'}
-                      className="hidden"
-                    />
+                  <input
+                    type="text"
+                    placeholder="Start a post"
+                    value={postText}
+                    onChange={(e) => setPostText(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); createPost(); } }}
+                    className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-full text-sm text-gray-600 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+                  />
+                </div>
 
-                    {imageUrl ? (
-                      activeAttachType === 'photo' ? (
-                        <div className="w-full flex justify-center relative">
-                          <img src={imageUrl} alt="Preview" className="max-h-[180px] object-contain rounded-lg shadow-sm" />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity rounded-lg">
-                            <span className="text-white text-xs font-semibold">Ganti Gambar</span>
+                {/* Conditional attachment inputs */}
+                {(activeAttachType === 'photo' || activeAttachType === 'video') && (
+                  <div className="mt-2 mb-4 p-4 bg-gray-50 rounded-2xl border border-gray-200 flex flex-col gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase">
+                        UPLOAD {activeAttachType === 'photo' ? 'FOTO' : 'VIDEO'} DARI DEVICE
+                      </p>
+                      {(imageFile || imageUrl) && (
+                        <button
+                          onClick={() => { setImageFile(null); setImageUrl(''); }}
+                          className="text-xs text-red-500 hover:text-red-600 font-semibold"
+                        >
+                          Hapus
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Clickable Drag & Drop Zone */}
+                    <div
+                      onClick={() => fileInputRef.current?.click()}
+                      className="border-2 border-dashed border-gray-200 hover:border-amber-400 hover:bg-amber-50/10 rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all duration-200 min-h-[140px] relative overflow-hidden bg-white"
+                    >
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        accept={activeAttachType === 'photo' ? 'image/*' : 'video/*'}
+                        className="hidden"
+                      />
+
+                      {imageUrl ? (
+                        activeAttachType === 'photo' ? (
+                          <div className="w-full flex justify-center relative">
+                            <img src={imageUrl} alt="Preview" className="max-h-[180px] object-contain rounded-lg shadow-sm" />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity rounded-lg">
+                              <span className="text-white text-xs font-semibold">Ganti Gambar</span>
+                            </div>
                           </div>
-                        </div>
+                        ) : (
+                          <div className="w-full flex justify-center relative text-center">
+                            <video src={imageUrl} controls className="max-h-[180px] object-contain rounded-lg shadow-sm mx-auto" />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity rounded-lg pointer-events-none">
+                              <span className="text-white text-xs font-semibold animate-in">Ganti Video</span>
+                            </div>
+                          </div>
+                        )
                       ) : (
-                        <div className="w-full flex justify-center relative text-center">
-                          <video src={imageUrl} controls className="max-h-[180px] object-contain rounded-lg shadow-sm mx-auto" />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity rounded-lg pointer-events-none">
-                            <span className="text-white text-xs font-semibold animate-in">Ganti Video</span>
+                        <>
+                          <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center text-amber-500">
+                            {activeAttachType === 'photo' ? (
+                              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                            ) : (
+                              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            )}
                           </div>
-                        </div>
-                      )
-                    ) : (
-                      <>
-                        <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center text-amber-500">
-                          {activeAttachType === 'photo' ? (
-                            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                          ) : (
-                            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
-                          )}
-                        </div>
-                        <p className="text-xs font-semibold text-gray-700">
-                          Klik untuk memilih {activeAttachType === 'photo' ? 'Foto' : 'Video'} dari device
-                        </p>
-                        <p className="text-[10px] text-gray-400">
-                          Mendukung file gambar PNG, JPG, JPEG atau video MP4
-                        </p>
-                      </>
-                    )}
+                          <p className="text-xs font-semibold text-gray-700">
+                            Klik untuk memilih {activeAttachType === 'photo' ? 'Foto' : 'Video'} dari device
+                          </p>
+                          <p className="text-[10px] text-gray-400">
+                            Mendukung file gambar PNG, JPG, JPEG atau video MP4
+                          </p>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center justify-around flex-1">
-                  {postActions.map((action, i) => {
-                    const isSelected = (action === 'Photo' && activeAttachType === 'photo') || 
-                                     (action === 'Video' && activeAttachType === 'video') || 
-                                     (action === 'Event' && activeAttachType === 'event') || 
-                                     (action === 'Write article' && activeAttachType === 'article');
-                    return (
-                      <button 
-                        key={action} 
-                        onClick={() => {
-                          if (action === 'Photo') setActiveAttachType(prev => prev === 'photo' ? null : 'photo');
-                          else if (action === 'Video') setActiveAttachType(prev => prev === 'video' ? null : 'video');
-                          else if (action === 'Event') {
-                            setActiveAttachType(prev => prev === 'event' ? null : 'event');
-                            setTag('Event');
-                          }
-                          else if (action === 'Write article') {
-                            setActiveAttachType(prev => prev === 'article' ? null : 'article');
-                            setTag('Article');
-                          }
-                        }}
-                        className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${isSelected ? 'bg-indigo-50 text-indigo-600 border border-indigo-200' : 'text-gray-500 hover:bg-gray-50'}`}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className={`w-4 h-4 ${postActionColors[i]}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d={postActionIcons[i]} />
-                        </svg>
-                        {action}
-                      </button>
-                    );
-                  })}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-around flex-1">
+                    {postActions.map((action, i) => {
+                      const isSelected = (action === 'Photo' && activeAttachType === 'photo') ||
+                        (action === 'Video' && activeAttachType === 'video') ||
+                        (action === 'Event' && activeAttachType === 'event') ||
+                        (action === 'Write article' && activeAttachType === 'article');
+                      return (
+                        <button
+                          key={action}
+                          onClick={() => {
+                            if (action === 'Photo') setActiveAttachType(prev => prev === 'photo' ? null : 'photo');
+                            else if (action === 'Video') setActiveAttachType(prev => prev === 'video' ? null : 'video');
+                            else if (action === 'Event') {
+                              setActiveAttachType(prev => prev === 'event' ? null : 'event');
+                              setTag('Event');
+                            }
+                            else if (action === 'Write article') {
+                              setActiveAttachType(prev => prev === 'article' ? null : 'article');
+                              setTag('Article');
+                            }
+                          }}
+                          className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${isSelected ? 'bg-indigo-50 text-indigo-600 border border-indigo-200' : 'text-gray-500 hover:bg-gray-50'}`}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className={`w-4 h-4 ${postActionColors[i]}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d={postActionIcons[i]} />
+                          </svg>
+                          {action}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button
+                    onClick={createPost}
+                    disabled={!postText.trim()}
+                    className="px-4 py-1.5 text-xs font-medium text-white bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 rounded-lg transition-colors"
+                  >
+                    Post
+                  </button>
                 </div>
-                <button 
-                  onClick={createPost}
-                  disabled={!postText.trim()}
-                  className="px-4 py-1.5 text-xs font-medium text-white bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 rounded-lg transition-colors"
-                >
-                  Post
-                </button>
               </div>
-            </div>
             )}
 
             {/* Loading State */}
@@ -565,7 +565,7 @@ export default function TimelineIndex() {
 
                     {/* Three dots dropdown */}
                     <div className="relative">
-                      <button 
+                      <button
                         onClick={() => setOpenDropdownId(openDropdownId === post.id ? null : post.id)}
                         className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-50 transition-colors"
                       >
@@ -577,7 +577,7 @@ export default function TimelineIndex() {
                       {openDropdownId === post.id && (
                         <div className="absolute right-0 mt-1 w-36 bg-white rounded-xl border border-gray-100 shadow-lg py-1.5 z-10 animate-in fade-in slide-in-from-top-1 duration-150">
                           {post.userId === profile?.userId ? (
-                            <button 
+                            <button
                               onClick={() => deletePost(post.id)}
                               className="w-full text-left px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 font-medium transition-colors flex items-center gap-1.5"
                             >
@@ -587,7 +587,7 @@ export default function TimelineIndex() {
                               Hapus Post
                             </button>
                           ) : (
-                            <button 
+                            <button
                               onClick={() => {
                                 setReportingPostId(post.id);
                                 setOpenDropdownId(null);
@@ -608,28 +608,28 @@ export default function TimelineIndex() {
                   {(() => {
                     const localMedia = (post as any).localMedia || localStorage.getItem(`post_media_${post.id}`);
                     const localMediaType = (post as any).localMediaType || localStorage.getItem(`post_media_type_${post.id}`);
-                    
+
                     const mediaUrl = localMedia || post.imageUrl || (post as any).image_url;
                     if (!mediaUrl) return null;
-                    
-                    const isVideo = localMediaType === 'video' || 
-                                    (!localMedia && mediaUrl.match(/\.(mp4|webm|ogg)$/i)) ||
-                                    mediaUrl.startsWith('data:video/') ||
-                                    mediaUrl.includes('mov_bbb.mp4');
+
+                    const isVideo = localMediaType === 'video' ||
+                      (!localMedia && mediaUrl.match(/\.(mp4|webm|ogg)$/i)) ||
+                      mediaUrl.startsWith('data:video/') ||
+                      mediaUrl.includes('mov_bbb.mp4');
 
                     if (isVideo) {
                       return (
-                        <video 
-                          src={mediaUrl} 
+                        <video
+                          src={mediaUrl}
                           controls
                           className="w-full max-h-[350px] object-cover rounded-xl border border-gray-100"
                         />
                       );
                     } else {
                       return (
-                        <img 
-                          src={mediaUrl} 
-                          alt="Post" 
+                        <img
+                          src={mediaUrl}
+                          alt="Post"
                           className="w-full max-h-[350px] object-cover rounded-xl border border-gray-100"
                         />
                       );
@@ -662,19 +662,19 @@ export default function TimelineIndex() {
 
                 {/* Action Buttons */}
                 <div className="px-5 py-2.5 border-t border-gray-100 flex items-center gap-1">
-                  <button 
+                  <button
                     onClick={() => toggleLike(post.id)}
                     className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-medium transition-all ${(post.liked || (post as any).is_liked_by_user) ? 'text-red-500 bg-red-50 hover:bg-red-100' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'}`}>
                     <LikeIcon filled={(post.liked || (post as any).is_liked_by_user) || false} />
                     {(post.liked || (post as any).is_liked_by_user) ? 'Liked' : 'Like'}
                   </button>
-                  <button 
+                  <button
                     onClick={() => toggleComments(post.id)}
                     className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-medium transition-all ${post.showComments ? 'text-amber-600 bg-amber-50 hover:bg-amber-100' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'}`}>
                     <CommentIcon />
                     Comment
                   </button>
-                  <button 
+                  <button
                     onClick={() => {
                       navigator.clipboard.writeText(`${window.location.origin}/timeline?post=${post.id}`);
                       alert('Link postingan berhasil disalin ke clipboard!');
@@ -705,7 +705,7 @@ export default function TimelineIndex() {
                                   <span className="text-[10px] text-gray-400">{formatTime(c.createdAt || (c as any).created_at)}</span>
                                 </div>
                                 {(c.userId === (profile?.userId || profile?.user?.id) || post.userId === (profile?.userId || profile?.user?.id)) && (
-                                  <button 
+                                  <button
                                     onClick={() => deleteComment(post.id, c.id)}
                                     className="text-gray-400 hover:text-red-500 transition-colors p-0.5"
                                     title="Hapus komentar"
@@ -729,16 +729,16 @@ export default function TimelineIndex() {
                         {(profile?.avatarUrl || (profile as any)?.avatar_url) ? <img src={profile?.avatarUrl || (profile as any)?.avatar_url} alt="Avatar" className="w-full h-full object-cover" /> : getInitials(profile?.user?.name || 'AA')}
                       </div>
                       <div className="flex-1 flex items-center gap-2">
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           placeholder="Write a comment..."
                           value={commentInputs[post.id] || ''}
                           onChange={(e) => setCommentInputs(prev => ({ ...prev, [post.id]: e.target.value }))}
                           onKeyDown={(e) => { if (e.key === 'Enter') addComment(post.id); }}
-                          className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-full text-xs text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent" 
+                          className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-full text-xs text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
                         />
-                        <button 
-                          onClick={() => addComment(post.id)} 
+                        <button
+                          onClick={() => addComment(post.id)}
                           disabled={!(commentInputs[post.id] || '').trim()}
                           className="p-1.5 text-amber-500 hover:text-amber-600 disabled:text-gray-300 disabled:cursor-not-allowed transition-colors">
                           <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -761,49 +761,48 @@ export default function TimelineIndex() {
 
           {/* Right Sidebar */}
           {!userIdParam && (
-          <div className="lg:col-span-3 space-y-5">
-            <div className="bg-white rounded-2xl border border-gray-100 p-5">
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-[10px] font-bold tracking-wider text-gray-400">RECENT ACTIVITIES</p>
-                <button className="text-gray-400 hover:text-gray-600">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </button>
-              </div>
-              <div className="space-y-4">
-                {recentActivities.length > 0 ? (
-                  recentActivities.map((activity) => (
-                    <div key={activity.id} className="flex items-start gap-3">
-                      <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
-                        activity.status === 'completed' ? 'bg-green-500' :
-                        activity.status === 'in_progress' ? 'bg-blue-500' :
-                        'bg-amber-500'
-                      }`} />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-gray-900 truncate">{activity.title}</p>
-                        <p className="text-xs text-gray-400 capitalize">{activity.type} • {formatTime(activity.activityDate || activity.createdAt)}</p>
+            <div className="lg:col-span-3 space-y-5 sticky top-24 self-start">
+              <div className="bg-white rounded-2xl border border-gray-100 p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-[10px] font-bold tracking-wider text-gray-400">RECENT ACTIVITIES & TASK</p>
+                  <button className="text-gray-400 hover:text-gray-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  {recentActivities.length > 0 ? (
+                    recentActivities.map((activity) => (
+                      <div key={activity.id} className="flex items-start gap-3">
+                        <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${activity.status === 'completed' ? 'bg-green-500' :
+                          activity.status === 'in_progress' ? 'bg-blue-500' :
+                            'bg-amber-500'
+                          }`} />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-gray-900 truncate">{activity.title}</p>
+                          <p className="text-xs text-gray-400 capitalize">{activity.type} • {formatTime(activity.activityDate || activity.createdAt)}</p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 rounded-full bg-red-500 mt-1.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">No Activities</p>
+                        <p className="text-xs text-gray-400">Check back later</p>
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <div className="flex items-start gap-3">
-                    <div className="w-2 h-2 rounded-full bg-red-500 mt-1.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900">No Activities</p>
-                      <p className="text-xs text-gray-400">Check back later</p>
-                    </div>
-                  </div>
-                )}
+                  )}
+                </div>
+                <Link
+                  href="/dashboard/activities"
+                  className="block w-full mt-4 py-2 text-center text-xs font-medium text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  View All Activities & Task
+                </Link>
               </div>
-              <Link 
-                href="/dashboard/activities"
-                className="block w-full mt-4 py-2 text-center text-xs font-medium text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                View All Calendar
-              </Link>
             </div>
-          </div>
           )}
         </div>
       </div>
@@ -818,7 +817,7 @@ export default function TimelineIndex() {
                 </svg>
                 Laporkan Postingan
               </h3>
-              <button 
+              <button
                 onClick={() => setReportingPostId(null)}
                 className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-50"
               >
@@ -827,11 +826,11 @@ export default function TimelineIndex() {
                 </svg>
               </button>
             </div>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-[10px] font-bold tracking-wider text-gray-400 uppercase mb-1.5">ALASAN PELAPORAN</label>
-                <select 
+                <select
                   value={reportReason}
                   onChange={(e) => setReportReason(e.target.value)}
                   className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-400"
@@ -847,7 +846,7 @@ export default function TimelineIndex() {
 
               <div>
                 <label className="block text-[10px] font-bold tracking-wider text-gray-400 uppercase mb-1.5">DESKRIPSI (OPSIONAL)</label>
-                <textarea 
+                <textarea
                   rows={3}
                   placeholder="Berikan detail tambahan tentang laporan Anda..."
                   value={reportDescription}
@@ -857,13 +856,13 @@ export default function TimelineIndex() {
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-50">
-                <button 
+                <button
                   onClick={() => setReportingPostId(null)}
                   className="px-4 py-2 text-xs font-semibold text-gray-500 hover:bg-gray-50 rounded-lg"
                 >
                   Batal
                 </button>
-                <button 
+                <button
                   onClick={submitReport}
                   disabled={submittingReport}
                   className="px-4 py-2 text-xs font-semibold text-white bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 rounded-lg shadow-sm"

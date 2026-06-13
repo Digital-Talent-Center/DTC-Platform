@@ -1,10 +1,10 @@
 import { useState, useRef, useCallback } from 'react';
 import type { ChangeEvent, FormEvent, DragEvent } from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-type Duration      = '7-hari' | '1-bulan' | '3-bulan';
+type Duration = '7-hari' | '1-bulan' | '3-bulan';
 type PaymentMethod = 'virtual-account' | 'e-wallet' | 'kartu-kredit';
 type PaymentStatus = 'idle' | 'success' | 'pending' | 'error';
 
@@ -25,8 +25,8 @@ interface PaymentOption {
 interface SnapCallbacks {
   onSuccess: (result: Record<string, unknown>) => void;
   onPending: (result: Record<string, unknown>) => void;
-  onError:   (result: Record<string, unknown>) => void;
-  onClose:   () => void;
+  onError: (result: Record<string, unknown>) => void;
+  onClose: () => void;
 }
 
 declare global {
@@ -39,13 +39,13 @@ declare global {
 
 // ─── Module-level constants (di luar JSX, tidak ada masalah Vite HMR) ─────────
 const ALLOWED_TYPES: string[] = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
-const MAX_FILE_BYTES           = 10 * 1024 * 1024; // 10MB
-const TAX_RATE                 = 0.11;
+const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10MB
+const TAX_RATE = 0.11;
 
 const DURATION_OPTIONS: DurationOption[] = [
-  { id: '7-hari',  label: '7 Hari',   price: 49000 },
-  { id: '1-bulan', label: '1 Bulan',  price: 149000, popular: true },
-  { id: '3-bulan', label: '3 Bulan',  price: 399000 },
+  { id: '7-hari', label: '7 Hari', price: 49000 },
+  { id: '1-bulan', label: '1 Bulan', price: 149000, popular: true },
+  { id: '3-bulan', label: '3 Bulan', price: 399000 },
 ];
 
 const PAYMENT_OPTIONS: PaymentOption[] = [
@@ -73,37 +73,37 @@ function formatRupiah(n: number): string {
 function getCsrfToken(): string {
   const xsrf = document.cookie
     .split(';')
-    .map(function(c) { return c.trim(); })
-    .find(function(c) { return c.startsWith('XSRF-TOKEN='); });
+    .map(function (c) { return c.trim(); })
+    .find(function (c) { return c.startsWith('XSRF-TOKEN='); });
   return xsrf ? decodeURIComponent(xsrf.slice(11)) : '';
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function PremiumPostPage() {
-  const [judul,         setJudul]         = useState('');
-  const [deskripsi,     setDeskripsi]     = useState('');
-  const [file,          setFile]          = useState<File | null>(null);
-  const [filePreview,   setFilePreview]   = useState<string | null>(null);
-  const [uploadedPath,  setUploadedPath]  = useState<string | null>(null);
-  const [uploading,     setUploading]     = useState(false);
-  const [dragActive,    setDragActive]    = useState(false);
-  const [duration,      setDuration]      = useState<Duration>('1-bulan');
-  const [payment,       setPayment]       = useState<PaymentMethod>('e-wallet');
-  const [formErrors,    setFormErrors]    = useState<Record<string, string>>({});
-  const [submitting,    setSubmitting]    = useState(false);
+  const [judul, setJudul] = useState('');
+  const [deskripsi, setDeskripsi] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
+  const [uploadedPath, setUploadedPath] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const [duration, setDuration] = useState<Duration>('1-bulan');
+  const [payment, setPayment] = useState<PaymentMethod>('e-wallet');
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('idle');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ─── Computed values ──────────────────────────────────────────────────────
-  const selectedOption = DURATION_OPTIONS.find(function(d) { return d.id === duration; });
+  const selectedOption = DURATION_OPTIONS.find(function (d) { return d.id === duration; });
   const selectedDuration = selectedOption !== undefined ? selectedOption : DURATION_OPTIONS[1];
   const subtotal = selectedDuration.price;
-  const tax      = Math.round(subtotal * TAX_RATE);
-  const total    = subtotal + tax;
+  const tax = Math.round(subtotal * TAX_RATE);
+  const total = subtotal + tax;
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
-  const resetFile = useCallback(function() {
+  const resetFile = useCallback(function () {
     setFile(null);
     setFilePreview(null);
     setUploadedPath(null);
@@ -113,14 +113,14 @@ export default function PremiumPostPage() {
   }, []);
 
   // ─── File upload ──────────────────────────────────────────────────────────
-  const handleFile = useCallback(async function(incoming: File | null) {
+  const handleFile = useCallback(async function (incoming: File | null) {
     if (incoming === null) {
       resetFile();
       return;
     }
 
     if (!ALLOWED_TYPES.includes(incoming.type)) {
-      setFormErrors(function(prev) {
+      setFormErrors(function (prev) {
         return Object.assign({}, prev, { file: 'Format file tidak valid. Hanya gambar JPG, JPEG, PNG, atau WEBP yang diizinkan.' });
       });
       resetFile();
@@ -128,14 +128,14 @@ export default function PremiumPostPage() {
     }
 
     if (incoming.size > MAX_FILE_BYTES) {
-      setFormErrors(function(prev) {
+      setFormErrors(function (prev) {
         return Object.assign({}, prev, { file: 'Ukuran file melebihi batas maksimal 10MB.' });
       });
       resetFile();
       return;
     }
 
-    setFormErrors(function(prev) {
+    setFormErrors(function (prev) {
       return Object.assign({}, prev, { file: '' });
     });
     setFile(incoming);
@@ -143,7 +143,7 @@ export default function PremiumPostPage() {
     const isImage = incoming.type.indexOf('image/') === 0;
     if (isImage) {
       const reader = new FileReader();
-      reader.onload = function(e) {
+      reader.onload = function (e) {
         if (e.target) {
           setFilePreview(e.target.result as string);
         }
@@ -188,7 +188,7 @@ export default function PremiumPostPage() {
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Upload gagal. Silakan coba lagi.';
-      setFormErrors(function(prev) {
+      setFormErrors(function (prev) {
         return Object.assign({}, prev, { file: msg });
       });
       resetFile();
@@ -197,7 +197,7 @@ export default function PremiumPostPage() {
     }
   }, [resetFile]);
 
-  const handleDrop = useCallback(function(e: DragEvent<HTMLLabelElement>) {
+  const handleDrop = useCallback(function (e: DragEvent<HTMLLabelElement>) {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
@@ -207,22 +207,22 @@ export default function PremiumPostPage() {
   }, [handleFile]);
 
   // ─── Form submit → Midtrans Snap ─────────────────────────────────────────
-  const handleSubmit = async function(e: FormEvent) {
+  const handleSubmit = async function (e: FormEvent) {
     e.preventDefault();
 
     const next: Record<string, string> = {};
-    if (!judul.trim())     { next['judul']     = 'Judul wajib diisi'; }
+    if (!judul.trim()) { next['judul'] = 'Judul wajib diisi'; }
     if (!deskripsi.trim()) { next['deskripsi'] = 'Deskripsi wajib diisi'; }
 
     if (Object.keys(next).length > 0) {
-      setFormErrors(function(prev) {
+      setFormErrors(function (prev) {
         return Object.assign({}, prev, next);
       });
       return;
     }
 
     if (uploading) {
-      setFormErrors(function(prev) {
+      setFormErrors(function (prev) {
         return Object.assign({}, prev, { submit: 'Tunggu hingga file selesai diupload.' });
       });
       return;
@@ -242,10 +242,10 @@ export default function PremiumPostPage() {
         },
         credentials: 'include',
         body: JSON.stringify({
-          duration:         duration,
-          post_title:       judul,
+          duration: duration,
+          post_title: judul,
           post_description: deskripsi,
-          attachment_path:  uploadedPath,
+          attachment_path: uploadedPath,
         }),
       });
 
@@ -274,7 +274,7 @@ export default function PremiumPostPage() {
       const orderId = data.order_id;
 
       window.snap.pay(data.snap_token, {
-        onSuccess: async function(_result) {
+        onSuccess: async function (_result) {
           setPaymentStatus('success');
           try {
             await fetch('/api/midtrans/check-and-mark-paid', {
@@ -290,25 +290,25 @@ export default function PremiumPostPage() {
           } catch (_e) {
             // webhook akan menanganinya
           }
-          setTimeout(function() {
+          setTimeout(function () {
             window.location.href = '/dashboard';
           }, 2500);
         },
-        onPending: function(_result) {
+        onPending: function (_result) {
           setPaymentStatus('pending');
         },
-        onError: function(_result) {
+        onError: function (_result) {
           setPaymentStatus('error');
           setSubmitting(false);
         },
-        onClose: function() {
+        onClose: function () {
           setSubmitting(false);
         },
       });
 
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Terjadi kesalahan. Silakan coba lagi.';
-      setFormErrors(function(prev) {
+      setFormErrors(function (prev) {
         return Object.assign({}, prev, { submit: message });
       });
       setSubmitting(false);
@@ -335,7 +335,12 @@ export default function PremiumPostPage() {
     <AppLayout>
       <Head title="Premium Post" />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 w-full">
-
+        <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 mb-4 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+          </svg>
+          Back to Dashboard
+        </Link>
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight">
@@ -374,10 +379,10 @@ export default function PremiumPostPage() {
                     id="input-judul"
                     type="text"
                     value={judul}
-                    onChange={function(e: ChangeEvent<HTMLInputElement>) {
+                    onChange={function (e: ChangeEvent<HTMLInputElement>) {
                       setJudul(e.target.value);
                       if (formErrors['judul']) {
-                        setFormErrors(function(p) { return Object.assign({}, p, { judul: '' }); });
+                        setFormErrors(function (p) { return Object.assign({}, p, { judul: '' }); });
                       }
                     }}
                     placeholder="Contoh: Webinar Strategi Belajar Efektif"
@@ -402,10 +407,10 @@ export default function PremiumPostPage() {
                     id="input-deskripsi"
                     rows={5}
                     value={deskripsi}
-                    onChange={function(e: ChangeEvent<HTMLTextAreaElement>) {
+                    onChange={function (e: ChangeEvent<HTMLTextAreaElement>) {
                       setDeskripsi(e.target.value);
                       if (formErrors['deskripsi']) {
-                        setFormErrors(function(p) { return Object.assign({}, p, { deskripsi: '' }); });
+                        setFormErrors(function (p) { return Object.assign({}, p, { deskripsi: '' }); });
                       }
                     }}
                     placeholder="Jelaskan detail kegiatan, tujuan, dan sasaran peserta..."
@@ -466,8 +471,8 @@ export default function PremiumPostPage() {
                   {/* Drop zone */}
                   <label
                     htmlFor="lampiran"
-                    onDragOver={function(e: DragEvent<HTMLLabelElement>) { e.preventDefault(); setDragActive(true); }}
-                    onDragLeave={function() { setDragActive(false); }}
+                    onDragOver={function (e: DragEvent<HTMLLabelElement>) { e.preventDefault(); setDragActive(true); }}
+                    onDragLeave={function () { setDragActive(false); }}
                     onDrop={handleDrop}
                     className={uploadAreaClass}
                   >
@@ -497,7 +502,7 @@ export default function PremiumPostPage() {
                       type="file"
                       accept="image/jpeg,image/png,image/webp"
                       className="hidden"
-                      onChange={function(e: ChangeEvent<HTMLInputElement>) {
+                      onChange={function (e: ChangeEvent<HTMLInputElement>) {
                         const files = e.target.files;
                         handleFile(files && files.length > 0 ? files[0] : null);
                       }}
@@ -528,7 +533,7 @@ export default function PremiumPostPage() {
               </div>
 
               <div className="grid grid-cols-3 gap-3">
-                {DURATION_OPTIONS.map(function(opt) {
+                {DURATION_OPTIONS.map(function (opt) {
                   const active = duration === opt.id;
                   const btnBase = 'relative rounded-xl border-2 p-4 text-left transition-all ';
                   const btnState = active
@@ -540,7 +545,7 @@ export default function PremiumPostPage() {
                     <button
                       key={opt.id}
                       type="button"
-                      onClick={function() { setDuration(opt.id); }}
+                      onClick={function () { setDuration(opt.id); }}
                       className={btnBase + btnState}
                     >
                       {opt.popular && (
@@ -590,7 +595,7 @@ export default function PremiumPostPage() {
                   Metode Pembayaran
                 </p>
                 <div className="space-y-2.5 mb-5">
-                  {PAYMENT_OPTIONS.map(function(opt) {
+                  {PAYMENT_OPTIONS.map(function (opt) {
                     const active = payment === opt.id;
                     const labelBase = 'flex items-center gap-3 px-4 py-3 rounded-lg border cursor-pointer transition-all ';
                     const labelState = active
@@ -612,7 +617,7 @@ export default function PremiumPostPage() {
                           name="payment"
                           value={opt.id}
                           checked={active}
-                          onChange={function() { setPayment(opt.id); }}
+                          onChange={function () { setPayment(opt.id); }}
                           className="w-4 h-4 text-amber-500 border-gray-300 focus:ring-amber-400"
                         />
                       </label>

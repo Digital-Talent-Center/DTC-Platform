@@ -8,20 +8,20 @@ const tabs = ['Achievement Collection', 'Need Approval', 'Rejected'];
 interface Achievement {
   id: number;
   nim: string;
-  nama_lengkap: string;
+  namaLengkap: string;
   title: string;
   description: string;
   category: string;
   jenis: string;
   tingkat: string;
   keikutsertaan: string;
-  tanggal_mulai: string;
-  tanggal_selesai: string;
-  link_sertifikat?: string;
-  bukti_path?: string;
+  tanggalMulai: string;
+  tanggalSelesai: string;
+  linkSertifikat?: string;
+  buktiPath?: string;
   status: 'pending' | 'approved' | 'rejected';
-  created_at: string;
-  updated_at: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 const getCategoryStyles = (category: string) => {
@@ -156,11 +156,11 @@ export default function AchievementsPage() {
           ) : filteredAchievements.length > 0 ? (
             filteredAchievements.map((item) => {
               const styles = getCategoryStyles(item.category);
-              const initials = item.nama_lengkap 
-                ? item.nama_lengkap.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() 
+              const initials = item.namaLengkap 
+                ? item.namaLengkap.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() 
                 : 'AA';
-              const dateLabel = item.tanggal_mulai 
-                ? `${new Date(item.tanggal_mulai).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric'})} - ${new Date(item.tanggal_selesai).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric'})}`
+              const dateLabel = item.tanggalMulai 
+                ? `${new Date(item.tanggalMulai).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric'})} - ${new Date(item.tanggalSelesai).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric'})}`
                 : '-';
 
               return (
@@ -178,8 +178,8 @@ export default function AchievementsPage() {
                     <p className="text-sm text-gray-500 mb-4 line-clamp-2">{item.description}</p>
                   </div>
                   <div>
-                    {item.link_sertifikat && (
-                      <a href={item.link_sertifikat} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-amber-600 mb-1 hover:underline">
+                    {item.linkSertifikat && (
+                      <a href={item.linkSertifikat} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-amber-600 mb-1 hover:underline">
                         <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.07-9.07l4.5-4.5a4.5 4.5 0 016.364 6.364l-1.757 1.757" />
                         </svg>
@@ -241,11 +241,11 @@ export default function AchievementsPage() {
                 </span>
                 <span className="flex items-center gap-1">
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>
-                  {latestApproved.tanggal_mulai ? new Date(latestApproved.tanggal_mulai).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric'}) : '-'}
+                  {latestApproved.tanggalMulai ? new Date(latestApproved.tanggalMulai).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric'}) : '-'}
                 </span>
               </div>
-              {latestApproved.link_sertifikat && (
-                <a href={latestApproved.link_sertifikat} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-full shadow-sm transition-all">
+              {latestApproved.linkSertifikat && (
+                <a href={latestApproved.linkSertifikat} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-full shadow-sm transition-all">
                   Lihat Sertifikat
                 </a>
               )}
