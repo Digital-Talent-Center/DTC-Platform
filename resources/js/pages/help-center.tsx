@@ -122,10 +122,6 @@ export default function HelpCenter() {
       question: 'Bagaimana cara menghubungi tim support?',
       answer: 'Anda dapat menghubungi kami melalui halaman Contact Us, atau mengirim email ke support@prodigi-dtc.ac.id. Tim kami akan merespons dalam waktu 1-2 hari kerja.',
     },
-    {
-      question: 'Apakah saya bisa menghapus akun saya?',
-      answer: 'Ya, Anda dapat menghapus akun melalui pengaturan profil. Perlu diingat bahwa penghapusan akun bersifat permanen dan semua data Anda akan dihapus dari sistem.',
-    },
   ];
 
   return (
