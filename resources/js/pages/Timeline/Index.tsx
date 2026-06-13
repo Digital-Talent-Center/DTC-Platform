@@ -513,7 +513,7 @@ export default function TimelineIndex() {
                             setTag('Article');
                           }
                         }}
-                        className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${isSelected ? 'bg-amber-50 text-amber-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                        className={`flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${isSelected ? 'bg-indigo-50 text-indigo-600 border border-indigo-200' : 'text-gray-500 hover:bg-gray-50'}`}
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className={`w-4 h-4 ${postActionColors[i]}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                           <path strokeLinecap="round" strokeLinejoin="round" d={postActionIcons[i]} />
