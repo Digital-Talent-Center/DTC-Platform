@@ -490,25 +490,6 @@ export default function TimelineIndex() {
                   </div>
                 </div>
               )}
-              {(activeAttachType === 'article' || activeAttachType === 'event') && (
-                <div className="mt-2 mb-4 p-3 bg-gray-50 rounded-xl border border-gray-100 flex items-center gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                  <input 
-                    type="text" 
-                    placeholder={
-                      activeAttachType === 'event' ? "Masukkan Tag Kegiatan (e.g. Seminar, Workshop)" :
-                      "Masukkan Tag Artikel (e.g. Artikel, Riset)"
-                    } 
-                    value={tag} 
-                    onChange={(e) => setTag(e.target.value)}
-                    className="flex-1 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-gray-700 focus:outline-none focus:ring-1 focus:ring-amber-400" 
-                  />
-                  <button onClick={() => { setTag(''); setActiveAttachType(null); }} className="text-gray-400 hover:text-gray-600">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                  </button>
-                </div>
-              )}
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center justify-around flex-1">
