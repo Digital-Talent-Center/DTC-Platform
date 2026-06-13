@@ -139,7 +139,7 @@ export default function ProfileEditPage() {
 
               <form onSubmit={handleSubmit} className="p-6 sm:p-8">
                 {loading ? (
-                  <div className="animate-pulse space-y-4">{[1,2,3,4].map(i => <div key={i} className="h-10 bg-gray-100 rounded-xl" />)}</div>
+                  <div className="animate-pulse space-y-4">{[1, 2, 3, 4].map(i => <div key={i} className="h-10 bg-gray-100 rounded-xl" />)}</div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     {[
@@ -180,10 +180,10 @@ export default function ProfileEditPage() {
           </div>
 
           {/* Right: Change Password */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 sticky top-24 self-start">
             <div className="bg-white rounded-2xl border border-gray-100 p-6 sm:p-8 h-fit">
               <h2 className="text-xl font-bold text-gray-900 mb-1">Ganti Password</h2>
-              <p className="text-sm text-gray-400 mb-6">Perbarui kata sandi akun kamu.</p>
+              <p className="text-sm text-gray-400 mb-6">Perbarui kata sandi akun anda.</p>
               <div className="space-y-4">
                 {([
                   { key: 'old' as const, label: 'PASSWORD LAMA', placeholder: 'Masukkan password saat ini' },
