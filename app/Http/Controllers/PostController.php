@@ -59,6 +59,26 @@ class PostController extends Controller
     }
 
     /**
+     * Upload media (foto/video) untuk sebuah post.
+     * Dipakai klien mobile yang mengunggah berkas asli (web memakai mekanisme
+     * localStorage di browser). Mengembalikan URL publik untuk disimpan ke
+     * kolom image_url post.
+     */
+    public function uploadMedia(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm,video/ogg|max:20480',
+        ]);
+
+        $path = $request->file('file')->store('post-media', 'public');
+
+        return response()->json([
+            'url'  => '/storage/' . $path,
+            'path' => $path,
+        ]);
+    }
+
+    /**
      * Update post
      */
     public function update(Request $request, Post $post)

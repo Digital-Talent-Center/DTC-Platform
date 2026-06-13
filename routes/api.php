@@ -12,14 +12,29 @@ use App\Http\Controllers\GuideController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\MidtransController;
 use App\Http\Controllers\PremiumTransactionController;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Middleware\AuthenticateApi;
 
-// All API routes require authentication via session (shared web middleware)
-Route::middleware('auth')->group(function () {
+// ── Auth mobile (Sanctum token) — publik untuk login & register ──
+Route::prefix('auth')->group(function () {
+    Route::post('register', [AuthController::class, 'register']);
+    Route::post('login', [AuthController::class, 'login']);
+
+    Route::middleware(AuthenticateApi::class)->group(function () {
+        Route::get('me', [AuthController::class, 'me']);
+        Route::post('logout', [AuthController::class, 'logout']);
+    });
+});
+
+// All API routes require authentication.
+// AuthenticateApi menerima dua mode: session cookie (SPA) ATAU Bearer token (mobile).
+Route::middleware(AuthenticateApi::class)->group(function () {
 
     // Posts Routes
     Route::prefix('posts')->group(function () {
         Route::get('/', [PostController::class, 'index']);
         Route::post('/', [PostController::class, 'store']);
+        Route::post('upload-media', [PostController::class, 'uploadMedia']); // sebelum {post}
         Route::get('{post}', [PostController::class, 'show']);
         Route::put('{post}', [PostController::class, 'update']);
         Route::delete('{post}', [PostController::class, 'destroy']);
