@@ -127,10 +127,11 @@ class PostController extends Controller
                 $fcm->sendToUser(
                     $postOwner,
                     'Postingan dihapus',
-                    "Postingan kamu dihapus karena {$reason}.",
+                    'Postingan kamu dihapus karena melanggar aturan komunitas',
                     [
-                        'type'   => 'POST_DELETED_BY_ADMIN',
-                        'reason' => $reason,
+                        'type'    => 'post_deleted',
+                        'post_id' => (string) $post->id,
+                        'reason'  => $reason,
                     ],
                     'SYSTEM',
                 );
@@ -178,10 +179,11 @@ class PostController extends Controller
                 $fcm->sendToUser(
                     $postOwner,
                     'Postingan kamu disukai',
-                    "{$actorName} menyukai postingan kamu.",
+                    "{$actorName} menyukai postingan kamu",
                     [
-                        'type'       => 'POST_LIKED',
+                        'type'       => 'post_like',
                         'post_id'    => (string) $post->id,
+                        'sender_id'  => (string) $userId,
                         'actor_name' => $actorName,
                     ],
                     'SYSTEM',

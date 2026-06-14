@@ -52,10 +52,12 @@ class CommentController extends Controller
                 $fcm->sendToUser(
                     $postOwner,
                     'Komentar baru',
-                    "{$actorName} mengomentari postingan kamu: {$preview}",
+                    "{$actorName} mengomentari postingan kamu",
                     [
-                        'type'            => 'POST_COMMENTED',
+                        'type'            => 'post_comment',
                         'post_id'         => (string) $post->id,
+                        'comment_id'      => (string) $comment->id,
+                        'sender_id'       => (string) Auth::id(),
                         'actor_name'      => $actorName,
                         'comment_preview' => $preview,
                     ],

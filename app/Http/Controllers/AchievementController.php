@@ -211,13 +211,18 @@ class AchievementController extends Controller
     {
         $validated = $request->validate([
             'status' => 'required|in:approved,rejected',
+            'reason' => 'nullable|string|max:500',
         ]);
 
         try {
             $achievement->update(['status' => $validated['status']]);
 
             // Kirim notifikasi FCM ke pemilik achievement.
-            $this->sendAchievementNotification($achievement, $validated['status']);
+            $this->sendAchievementNotification(
+                $achievement,
+                $validated['status'],
+                $validated['reason'] ?? null,
+            );
 
             return back()->with('success', 'Status pencapaian berhasil diperbarui.');
         } catch (\Exception $e) {
@@ -227,8 +232,12 @@ class AchievementController extends Controller
 
     /**
      * Kirim notifikasi FCM saat achievement di-approve atau di-reject.
+     *
+     * @param  Achievement $achievement
+     * @param  string      $status  'approved' | 'rejected'
+     * @param  string|null $reason  Alasan penolakan (opsional, untuk rejected)
      */
-    private function sendAchievementNotification(Achievement $achievement, string $status): void
+    private function sendAchievementNotification(Achievement $achievement, string $status, ?string $reason = null): void
     {
         try {
             $owner = $achievement->user;
@@ -236,12 +245,23 @@ class AchievementController extends Controller
 
             if ($status === 'approved') {
                 $title = 'Achievement diterima';
-                $body  = 'Achievement kamu berhasil disetujui.';
-                $type  = 'ACHIEVEMENT_APPROVED';
+                $body  = 'Achievement kamu berhasil diverifikasi';
+                $type  = 'achievement_approved';
+                $data  = [
+                    'type'           => $type,
+                    'achievement_id' => (string) $achievement->id,
+                ];
             } else {
                 $title = 'Achievement ditolak';
-                $body  = 'Achievement kamu ditolak. Silakan cek alasan penolakan.';
-                $type  = 'ACHIEVEMENT_REJECTED';
+                $body  = 'Achievement kamu belum memenuhi syarat';
+                $type  = 'achievement_rejected';
+                $data  = [
+                    'type'           => $type,
+                    'achievement_id' => (string) $achievement->id,
+                ];
+                if ($reason) {
+                    $data['reason'] = $reason;
+                }
             }
 
             $fcm = new FcmService();
@@ -249,10 +269,7 @@ class AchievementController extends Controller
                 $owner,
                 $title,
                 $body,
-                [
-                    'type'           => $type,
-                    'achievement_id' => (string) $achievement->id,
-                ],
+                $data,
                 'ACHIEVEMENT',
             );
         } catch (\Throwable $e) {

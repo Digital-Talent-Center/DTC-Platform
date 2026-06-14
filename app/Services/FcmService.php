@@ -181,10 +181,17 @@ class FcmService
 
     /**
      * Path ke file service account JSON.
+     *
+     * Mendukung dua env key:
+     *   FIREBASE_CREDENTIALS      (sesuai spec baru)
+     *   FIREBASE_CREDENTIALS_PATH (key lama, tetap didukung)
+     *
+     * FIREBASE_CREDENTIALS diprioritaskan jika keduanya di-set.
      */
     private function getCredentialsPath(): ?string
     {
-        $path = env('FIREBASE_CREDENTIALS_PATH');
+        // Prioritas: FIREBASE_CREDENTIALS → FIREBASE_CREDENTIALS_PATH
+        $path = env('FIREBASE_CREDENTIALS') ?: env('FIREBASE_CREDENTIALS_PATH');
         if (!$path) {
             return null;
         }
