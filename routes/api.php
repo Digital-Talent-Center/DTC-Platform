@@ -14,6 +14,7 @@ use App\Http\Controllers\MidtransController;
 use App\Http\Controllers\PremiumTransactionController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\FcmTokenController;
+use App\Http\Controllers\ChatSessionController;
 use App\Http\Middleware\AuthenticateApi;
 
 // ── Auth mobile (Sanctum token) — publik untuk login & register ──
@@ -34,6 +35,14 @@ Route::middleware(AuthenticateApi::class)->group(function () {
     // ── FCM Token (push notification device registration) ──
     Route::post('fcm-token', [FcmTokenController::class, 'store']);
     Route::delete('fcm-token', [FcmTokenController::class, 'destroy']);
+
+    // ── Chat Sessions (riwayat percakapan DTC AI — sync web ↔ mobile) ──
+    Route::prefix('chat-sessions')->group(function () {
+        Route::get('/', [ChatSessionController::class, 'index']);
+        Route::post('/', [ChatSessionController::class, 'store']);
+        Route::delete('all', [ChatSessionController::class, 'destroyAll']);
+        Route::delete('{chatSession}', [ChatSessionController::class, 'destroy']);
+    });
 
     // Posts Routes
     Route::prefix('posts')->group(function () {
