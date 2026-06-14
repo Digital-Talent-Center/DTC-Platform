@@ -69,22 +69,16 @@ function getDeepActiveElement(): Element | null {
   return el;
 }
 
-/* ── Conversation history (localStorage-based) ── */
+/* ── Conversation history (API-synced ↔ server) ── */
 interface HistoryItem {
-  id: string;
+  id: string;          // botpress_conversation_id
+  serverId?: number;   // DB primary key (for delete)
   title: string;
   preview: string;
   ts: number;
 }
 
-const H_KEY = `prodigi-history-${BP_CLIENT_ID}`;
 const BP_KEY = `bp-webchat-${BP_CLIENT_ID}-client`;
-
-const loadHistory = (): HistoryItem[] => {
-  try { return JSON.parse(localStorage.getItem(H_KEY) || '[]'); }
-  catch { return []; }
-};
-const saveHistory = (h: HistoryItem[]) => localStorage.setItem(H_KEY, JSON.stringify(h));
 
 const getBpConvoId = (): string | null => {
   try {
@@ -92,88 +86,164 @@ const getBpConvoId = (): string | null => {
   } catch { return null; }
 };
 
+/* ── API helpers ── */
+const csrfToken = () =>
+  document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content || '';
+
+const apiFetch = (path: string, opts: RequestInit = {}) =>
+  fetch(`/api${path}`, {
+    ...opts,
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'X-CSRF-TOKEN': csrfToken(),
+      ...(opts.headers || {}),
+    },
+  });
+
+const fetchHistory = async (): Promise<HistoryItem[]> => {
+  try {
+    const res = await apiFetch('/chat-sessions');
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.map((s: any) => ({
+      id: s.botpress_conversation_id,
+      serverId: s.id,
+      title: s.title || 'Percakapan Baru',
+      preview: '',
+      ts: new Date(s.updated_at).getTime(),
+    }));
+  } catch { return []; }
+};
+
+const upsertSession = async (bpConvoId: string, title: string) => {
+  try {
+    await apiFetch('/chat-sessions', {
+      method: 'POST',
+      body: JSON.stringify({ botpress_conversation_id: bpConvoId, title }),
+    });
+  } catch { /* best-effort */ }
+};
+
+const deleteSession = async (serverId: number) => {
+  try {
+    await apiFetch(`/chat-sessions/${serverId}`, { method: 'DELETE' });
+  } catch { /* best-effort */ }
+};
+
+const deleteAllSessions = async () => {
+  try {
+    await apiFetch('/chat-sessions/all', { method: 'DELETE' });
+  } catch { /* best-effort */ }
+};
+
 export default function ChatbotPage() {
   const { auth } = usePage<SharedData>().props;
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [history, setHistory] = useState<HistoryItem[]>(loadHistory);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+
+  /* ── Load history from API on mount ── */
+  useEffect(() => {
+    fetchHistory().then(h => setHistory(h));
+  }, []);
 
   /* ── Sync current Botpress conversation into sidebar history ── */
   const syncHistory = useCallback(() => {
     const cid = getBpConvoId();
     if (!cid) return;
     setActiveId(cid);
-    setHistory(prev => {
-      if (prev.find(h => h.id === cid)) return prev;
-      const next: HistoryItem[] = [
-        { id: cid, title: 'Percakapan Baru', preview: 'Mulai percakapan…', ts: Date.now() },
-        ...prev,
-      ];
-      saveHistory(next);
-      return next;
-    });
   }, []);
 
-  /* ── Rename title when user sends first message (Enter key capture) ── */
+  /* ── Rename title when user sends first message (Botpress Event Listener) ── */
   useEffect(() => {
     if (status !== 'ready') return;
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'Enter' || e.shiftKey) return;
+    const handleMessage = (event: any) => {
+      if (event.direction !== 'outgoing') return;
 
-      // Get the deep active element (traverses into shadow DOM)
-      const active = getDeepActiveElement();
-      if (!active) return;
-
-      // Read value from textarea or input
-      const value = (active as HTMLTextAreaElement | HTMLInputElement).value?.trim();
-      if (!value || value.length < 2) return;
+      const text = (event.payload?.text || event.preview || event.content || '').trim();
+      if (text.length < 2) return;
 
       const cid = getBpConvoId();
       if (!cid) return;
 
-      // Small delay so Botpress processes the send first
-      setTimeout(() => {
-        const current = loadHistory();
-        const item = current.find(h => h.id === cid);
-        if (!item || item.title !== 'Percakapan Baru') return;
+      setHistory(prev => {
+        const item = prev.find(h => h.id === cid);
+        const title = text.length > 35 ? text.slice(0, 35) + '…' : text;
+        const preview = text.length > 60 ? text.slice(0, 60) + '…' : text;
 
-        const title = value.length > 35 ? value.slice(0, 35) + '…' : value;
-        const preview = value.length > 60 ? value.slice(0, 60) + '…' : value;
+        if (!item) {
+          // New conversation, save it to server and add to sidebar list
+          upsertSession(cid, title);
+          return [
+            { id: cid, title, preview, ts: Date.now() },
+            ...prev
+          ];
+        }
 
-        setHistory(prev => {
-          const updated = prev.map(h =>
+        // Existing conversation but was named "Percakapan Baru", rename it on server
+        if (item.title === 'Percakapan Baru') {
+          upsertSession(cid, title);
+          return prev.map(h =>
             h.id === cid ? { ...h, title, preview } : h
           );
-          saveHistory(updated);
-          return updated;
-        });
-      }, 200);
+        }
+
+        return prev;
+      });
     };
 
-    // Capture phase so we get the event BEFORE Botpress clears the input
-    document.addEventListener('keydown', handleKeyDown, true);
-    return () => document.removeEventListener('keydown', handleKeyDown, true);
+    const unsubscribe = window.botpress?.on('message', handleMessage);
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
   }, [status]);
 
-  /* ── Load Botpress ── */
-  useEffect(() => {
-    const boot = () => {
-      if (!document.getElementById('bp-config')) {
+  /* ── Actions ── */
+  const initBotpress = () => {
+    try {
+      // 1. Clean up existing Botpress elements and scripts
+      try { window.botpress?.close(); } catch {}
+      document.getElementById('bp-webchat-container')?.remove();
+      document.querySelectorAll('[class*="bp-widget"]').forEach(el => el.remove());
+      document.getElementById('bp-inject')?.remove();
+      document.getElementById('bp-config')?.remove();
+      delete window.botpress;
+      delete (window as any).botpressWebChat;
+
+      // Also clean up any Botpress stylesheets
+      document.querySelectorAll('link[href*="botpress"]').forEach(el => el.remove());
+
+      const el = document.getElementById('bp-embedded-webchat');
+      if (el) el.innerHTML = '';
+
+      // 2. Re-inject scripts to force fresh initialization
+      setStatus('loading');
+      const s = document.createElement('script');
+      s.id = 'bp-inject'; s.src = BP_INJECT; s.async = true;
+      s.onload = () => {
         const c = document.createElement('script');
         c.id = 'bp-config'; c.src = BP_CONFIG; c.defer = true;
         c.onload = () => setStatus('ready');
         c.onerror = () => setStatus('error');
         document.head.appendChild(c);
-      } else { setStatus('ready'); }
-    };
-    if (!document.getElementById('bp-inject')) {
-      const s = document.createElement('script');
-      s.id = 'bp-inject'; s.src = BP_INJECT; s.async = true;
-      s.onload = boot; s.onerror = () => setStatus('error');
+      };
+      s.onerror = () => setStatus('error');
       document.head.appendChild(s);
-    } else { boot(); }
-    return () => { window.botpress?.close(); };
+    } catch {
+      window.location.reload();
+    }
+  };
+
+  /* ── Load Botpress on Mount ── */
+  useEffect(() => {
+    initBotpress();
+    return () => {
+      try { window.botpress?.close(); } catch {}
+    };
   }, []);
 
   /* ── Poll: inject shadow CSS + sync history ── */
@@ -187,14 +257,16 @@ export default function ChatbotPage() {
     return () => clearInterval(t);
   }, [status, syncHistory]);
 
-  /* ── Actions ── */
   const switchChat = (cid: string) => {
     try {
       const d = JSON.parse(localStorage.getItem(BP_KEY) || '{"state":{}}');
       d.state = { ...d.state, conversationId: cid };
       localStorage.setItem(BP_KEY, JSON.stringify(d));
+      setActiveId(cid);
+      initBotpress();
+    } catch {
       window.location.reload();
-    } catch { /* noop */ }
+    }
   };
 
   const newChat = () => {
@@ -202,13 +274,16 @@ export default function ChatbotPage() {
       const d = JSON.parse(localStorage.getItem(BP_KEY) || '{"state":{}}');
       if (d.state) delete d.state.conversationId;
       localStorage.setItem(BP_KEY, JSON.stringify(d));
+      setActiveId(null);
+      initBotpress();
+    } catch {
       window.location.reload();
-    } catch { /* noop */ }
+    }
   };
 
   const clearAll = () => {
     if (!confirm('Hapus semua riwayat percakapan?')) return;
-    localStorage.removeItem(H_KEY);
+    deleteAllSessions();
     localStorage.removeItem(BP_KEY);
     setHistory([]); setActiveId(null);
     window.location.reload();
@@ -216,11 +291,9 @@ export default function ChatbotPage() {
 
   const deleteOne = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    setHistory(prev => {
-      const updated = prev.filter(h => h.id !== id);
-      saveHistory(updated);
-      return updated;
-    });
+    const item = history.find(h => h.id === id);
+    if (item?.serverId) deleteSession(item.serverId);
+    setHistory(prev => prev.filter(h => h.id !== id));
     // If we deleted the active conversation, start a new one
     if (activeId === id) newChat();
   };
