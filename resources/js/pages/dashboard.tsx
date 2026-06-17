@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { Link, Head } from "@inertiajs/react";
+import { Link, Head, usePage } from "@inertiajs/react";
 import AppLayout from "@/layouts/app-layout";
 import { api } from "@/services/api";
-import type { PremiumTransaction } from "@/types";
+import type { PremiumTransaction, SharedData } from "@/types";
 
 interface MenuItem {
   label: string;
@@ -188,9 +188,13 @@ function PremiumModal({ tx, onClose }: { tx: PremiumTransaction; onClose: () => 
 
 /* ──────────────── Premium Posts Carousel ──────────────── */
 function PremiumPostsSection() {
+  const { auth } = usePage<SharedData>().props;
+  const isAdmin = auth.user?.role === 'admin';
+
   const [selectedTx, setSelectedTx] = useState<PremiumTransaction | null>(null);
   const [highlights, setHighlights] = useState<PremiumTransaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
@@ -210,6 +214,24 @@ function PremiumPostsSection() {
 
     loadHighlights();
   }, []);
+
+  useEffect(() => {
+    if (openMenuId === null) return;
+    const close = () => setOpenMenuId(null);
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [openMenuId]);
+
+  async function handleDelete(id: number) {
+    if (!confirm('Hapus premium post ini? Tindakan ini tidak dapat dibatalkan.')) return;
+    try {
+      await api.premiumTransactions.delete(id);
+      setHighlights(prev => prev.filter(tx => tx.id !== id));
+      setOpenMenuId(null);
+    } catch {
+      alert('Gagal menghapus post. Silakan coba lagi.');
+    }
+  }
 
   function updateScrollButtons() {
     const el = scrollRef.current;
@@ -338,8 +360,38 @@ function PremiumPostsSection() {
               <div
                 key={tx.id}
                 onClick={() => setSelectedTx(tx)}
-                className="group flex-shrink-0 w-[360px] sm:w-[420px] bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-xl hover:border-amber-200 hover:-translate-y-1 transition-all duration-300 cursor-pointer snap-start"
+                className="group relative flex-shrink-0 w-[360px] sm:w-[420px] bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-xl hover:border-amber-200 hover:-translate-y-1 transition-all duration-300 cursor-pointer snap-start"
               >
+                {/* Tombol tiga titik — hanya tampil untuk admin */}
+                {isAdmin && (
+                  <div
+                    className="absolute top-2 right-2 z-10"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <button
+                      onClick={() => setOpenMenuId(openMenuId === tx.id ? null : tx.id)}
+                      className="w-7 h-7 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white shadow flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors cursor-pointer"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                      </svg>
+                    </button>
+                    {openMenuId === tx.id && (
+                      <div className="absolute right-0 mt-1 w-40 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-20">
+                        <button
+                          onClick={() => handleDelete(tx.id)}
+                          className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2 cursor-pointer"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          Hapus Post
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex h-[180px] sm:h-[200px]">
                   {/* Kolom kiri: gambar / placeholder */}
                   <div className="w-[45%] relative overflow-hidden bg-gray-100">

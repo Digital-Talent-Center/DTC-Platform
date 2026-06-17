@@ -56,4 +56,22 @@ class PremiumTransactionController extends Controller
 
         return response()->json(['data' => $highlights]);
     }
+
+    /**
+     * DELETE /api/premium-transactions/{id}
+     *
+     * Menghapus premium post. Hanya bisa diakses oleh admin.
+     */
+    public function destroy(int $id)
+    {
+        $tx = PremiumTransaction::findOrFail($id);
+
+        if ($tx->attachment_path) {
+            Storage::delete($tx->attachment_path);
+        }
+
+        $tx->delete();
+
+        return response()->json(['message' => 'Post berhasil dihapus']);
+    }
 }

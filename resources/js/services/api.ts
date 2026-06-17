@@ -536,6 +536,10 @@ export const api = {
       return fetch(`${API_BASE}/premium-transactions/highlights`, buildFetchOptions('GET'))
         .then(r => handleResponse<{ data: PremiumTransaction[] }>(r));
     },
+    delete: async (id: number): Promise<{ message: string }> => {
+      return fetch(`${API_BASE}/premium-transactions/${id}`, buildFetchOptions('DELETE'))
+        .then(r => handleResponse<{ message: string }>(r));
+    },
   },
 };
 

@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\FcmTokenController;
 use App\Http\Controllers\ChatSessionController;
 use App\Http\Middleware\AuthenticateApi;
+use App\Http\Middleware\IsAdmin;
 
 // ── Auth mobile (Sanctum token) — publik untuk login & register ──
 Route::prefix('auth')->group(function () {
@@ -153,6 +154,8 @@ Route::middleware(AuthenticateApi::class)->group(function () {
     Route::prefix('premium-transactions')->group(function () {
         // GET /api/premium-transactions/highlights — paid posts untuk Premium Highlights di dashboard
         Route::get('highlights', [PremiumTransactionController::class, 'highlights']);
+        // DELETE /api/premium-transactions/{id} — hapus premium post (admin only)
+        Route::delete('{id}', [PremiumTransactionController::class, 'destroy'])->middleware(IsAdmin::class);
     });
 });
 
