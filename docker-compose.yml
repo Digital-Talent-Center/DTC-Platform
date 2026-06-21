@@ -1,0 +1,202 @@
+# =============================================================================
+# docker-compose.yml — DTC Platform DEVELOPMENT
+# Hot-reload, Xdebug, bind mounts, all tools available
+# =============================================================================
+
+name: dtc-platform
+
+services:
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # PHP-FPM (Laravel backend)
+  # ────────────────────────────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: app-dev     # Development stage (Xdebug, dev deps)
+    container_name: dtc_app
+    restart: unless-stopped
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+    env_file:
+      - .env
+    volumes:
+      # Bind mount full codebase for hot-reload
+      - .:/var/www/html
+      # Persist vendor to avoid re-install on every restart
+      - vendor_cache:/var/www/html/vendor
+      # Persist bootstrap cache
+      - bootstrap_cache:/var/www/html/bootstrap/cache
+      # Mount Firebase credentials (Option A: volume mount)
+      - firebase_credentials:/var/www/html/storage/app/firebase:ro
+    networks:
+      - dtc_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "php-fpm --test || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    extra_hosts:
+      # Allows Xdebug inside container to reach the host IDE
+      - "host.docker.internal:host-gateway"
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Queue worker (runs artisan queue:work)
+  # ────────────────────────────────────────────────────────────────────────────
+  queue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: app-dev
+    container_name: dtc_queue
+    restart: unless-stopped
+    command: ["php", "artisan", "queue:work", "redis", "--sleep=3", "--tries=3", "--max-time=3600"]
+    env_file:
+      - .env
+    environment:
+      APP_ENV: local
+    volumes:
+      - .:/var/www/html
+      - vendor_cache:/var/www/html/vendor
+      - firebase_credentials:/var/www/html/storage/app/firebase:ro
+    networks:
+      - dtc_network
+    depends_on:
+      app:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Vite dev server (React + Tailwind hot-reload)
+  # ────────────────────────────────────────────────────────────────────────────
+  vite:
+    image: node:20-alpine
+    container_name: dtc_vite
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: development
+    volumes:
+      # Bind mount for hot-reload
+      - .:/app
+      # Persist node_modules to speed up restarts
+      - node_modules_cache:/app/node_modules
+    ports:
+      - "${VITE_PORT:-5173}:5173"
+    networks:
+      - dtc_network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5173/@vite/client 2>&1 | head -1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Nginx (web server / reverse proxy)
+  # ────────────────────────────────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: dtc_nginx
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-80}:80"
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./public:/var/www/html/public:ro
+    networks:
+      - dtc_network
+    depends_on:
+      - app
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # PostgreSQL 16
+  # ────────────────────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: dtc_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-dtc_platform}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT_EXPOSE:-5432}:5432"
+    networks:
+      - dtc_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_DATABASE:-dtc_platform}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Redis 7 (cache + queue broker)
+  # ────────────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: dtc_redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-} --save 60 1 --loglevel warning
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_PORT_EXPOSE:-6379}:6379"
+    networks:
+      - dtc_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Named volumes
+# ─────────────────────────────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  vendor_cache:
+    driver: local
+  bootstrap_cache:
+    driver: local
+  node_modules_cache:
+    driver: local
+  # Mount point for Firebase credentials JSON
+  # Before first run: docker volume create dtc-platform_firebase_credentials
+  # Then copy your JSON: docker run --rm -v dtc-platform_firebase_credentials:/creds -v $(pwd)/storage/app/firebase:/src alpine cp /src/firebase-service-account.json /creds/
+  firebase_credentials:
+    driver: local
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Networks
+# ─────────────────────────────────────────────────────────────────────────────
+networks:
+  dtc_network:
+    driver: bridge
+    name: dtc_network
