@@ -142,6 +142,13 @@ export default function ChatbotPage() {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsSidebarOpen(window.innerWidth >= 768);
+    }
+  }, []);
 
   /* ── Load history from API on mount ── */
   useEffect(() => {
@@ -263,6 +270,7 @@ export default function ChatbotPage() {
       d.state = { ...d.state, conversationId: cid };
       localStorage.setItem(BP_KEY, JSON.stringify(d));
       setActiveId(cid);
+      if (window.innerWidth < 768) setIsSidebarOpen(false);
       initBotpress();
     } catch {
       window.location.reload();
@@ -275,6 +283,7 @@ export default function ChatbotPage() {
       if (d.state) delete d.state.conversationId;
       localStorage.setItem(BP_KEY, JSON.stringify(d));
       setActiveId(null);
+      if (window.innerWidth < 768) setIsSidebarOpen(false);
       initBotpress();
     } catch {
       window.location.reload();
@@ -302,10 +311,26 @@ export default function ChatbotPage() {
   return (
     <AppLayout>
       <Head title="DTC AI – Chatbot" />
-      <div className="flex h-[calc(100vh-4rem)] overflow-hidden bg-white">
+      <div className="flex h-[calc(100vh-4rem)] overflow-hidden bg-white relative">
+
+        {/* ─── MOBILE OVERLAY ─── */}
+        {isSidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black/20 z-10 md:hidden" 
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
 
         {/* ─── LEFT SIDEBAR ─── */}
-        <aside className="w-56 shrink-0 bg-white border-r border-gray-100 flex flex-col">
+        <aside className={`shrink-0 bg-white border-r border-gray-100 flex flex-col transition-all duration-300 absolute md:relative z-20 h-full overflow-hidden ${isSidebarOpen ? 'w-64 md:w-56 translate-x-0' : 'w-64 md:w-0 -translate-x-full md:translate-x-0 border-r-0'}`}>
+          {/* Header Sidebar Mobile Only */}
+          <div className="flex md:hidden items-center justify-between p-4 border-b border-gray-100">
+            <span className="font-bold text-gray-900">Riwayat Chat</span>
+            <button onClick={() => setIsSidebarOpen(false)} className="p-1 text-gray-400 hover:text-gray-600 rounded-lg bg-gray-50">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+
           {/* New chat */}
           <div className="p-3">
             <button onClick={newChat}
@@ -372,8 +397,17 @@ export default function ChatbotPage() {
         <div className="flex-1 flex flex-col overflow-hidden relative">
 
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-3.5 bg-white border-b border-gray-100 shrink-0 z-10">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 bg-white border-b border-gray-100 shrink-0 z-10">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <button 
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+                className="p-1.5 -ml-1 hover:bg-gray-100 rounded-lg transition-colors text-gray-500"
+                title="Toggle Sidebar"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
               <p className="text-base font-bold text-gray-900">DTC AI</p>
               {status === 'ready' && (
                 <span className="flex items-center gap-1 ml-1">

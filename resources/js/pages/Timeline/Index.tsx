@@ -340,7 +340,7 @@ export default function TimelineIndex() {
         <div className={userIdParam ? "flex flex-col items-center" : "grid grid-cols-1 lg:grid-cols-12 gap-6"}>
           {/* Left Sidebar - Profile */}
           {!userIdParam && (
-            <div className="lg:col-span-3 space-y-5 sticky top-24 self-start">
+            <div className="lg:col-span-3 space-y-5 lg:sticky lg:top-24 lg:self-start">
               <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
                 <div className="h-20 bg-gradient-to-r from-amber-400 to-amber-500" />
                 <div className="px-5 pb-5 -mt-8 text-center">
@@ -761,7 +761,7 @@ export default function TimelineIndex() {
 
           {/* Right Sidebar */}
           {!userIdParam && (
-            <div className="lg:col-span-3 space-y-5 sticky top-24 self-start">
+            <div className="lg:col-span-3 space-y-5 lg:sticky lg:top-24 lg:self-start">
               <div className="bg-white rounded-2xl border border-gray-100 p-5">
                 <div className="flex items-center justify-between mb-4">
                   <p className="text-[10px] font-bold tracking-wider text-gray-400">RECENT ACTIVITIES & TASK</p>

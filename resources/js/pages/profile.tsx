@@ -124,7 +124,7 @@ export default function ProfilePage({ userId }: { userId?: string | number }) {
 
         {/* Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-          <div className="lg:col-span-2 space-y-6 sticky top-24 self-start">
+          <div className="lg:col-span-2 space-y-6 lg:sticky lg:top-24 lg:self-start">
             {/* About */}
             <div className="bg-white rounded-2xl border border-gray-100 p-6">
               <h2 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
