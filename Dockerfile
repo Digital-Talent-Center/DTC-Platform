@@ -142,9 +142,9 @@ CMD ["php-fpm"]
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 5: app-dev — Development image with Xdebug
-# Entrypoint runs as root to fix bind-mount permissions,
-# then PHP-FPM master also runs as root but workers drop to laravel user.
-# This is the standard Docker pattern for bind mounts.
+# Runs PHP-FPM as root so it can write to Windows Docker bind-mounted files.
+# On Windows, ALL bind-mounted files appear as root:root inside the container.
+# This is DEVELOPMENT ONLY — production uses the non-root laravel user.
 # ─────────────────────────────────────────────────────────────────────────────
 FROM base AS app-dev
 
@@ -156,36 +156,33 @@ RUN apk add --no-cache --virtual .pecl-deps $PHPIZE_DEPS linux-headers \
     && apk del .pecl-deps \
     && rm -rf /tmp/pear
 
-# Development PHP config
+# Development PHP config (errors visible, Xdebug enabled)
 COPY docker/php/php-dev.ini /usr/local/etc/php/conf.d/php-custom.ini
 
-# PHP-FPM pool config for dev (user=laravel, PHP-FPM master runs as root)
+# PHP-FPM pool config for dev:
+# - user=root so workers can write to bind-mounted Windows files
+# - clear_env=no so Docker env vars (APP_KEY, DB_*, etc.) reach PHP workers
 COPY docker/php/www-dev.conf /usr/local/etc/php-fpm.d/www.conf
 
-# Copy entrypoint — runs as root, fixes permissions, then launches php-fpm
+# Copy entrypoint startup script
 COPY docker/php/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh \
-    # Fix Windows CRLF line endings if present
+    # Fix Windows CRLF line endings
     && sed -i 's/\r//' /usr/local/bin/entrypoint.sh
 
-# Pre-create storage dirs owned by laravel so bind-mount works
+# Pre-create runtime directories
 RUN mkdir -p /var/www/html/storage/logs \
              /var/www/html/storage/framework/cache \
              /var/www/html/storage/framework/sessions \
              /var/www/html/storage/framework/views \
              /var/www/html/bootstrap/cache \
-    && chown -R laravel:laravel /var/www/html/storage /var/www/html/bootstrap/cache \
-    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+    && chmod -R 777 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Copy composer files (actual install via bind-mount happens in entrypoint)
-COPY --chown=laravel:laravel composer.json composer.lock ./
-
-# Run as root so entrypoint can fix bind-mount permissions before switching
-# PHP-FPM workers will still run as laravel user (configured in www-dev.conf)
-# USER laravel — intentionally left as root for dev bind-mount compatibility
+# Copy composer files (actual install happens at runtime via entrypoint + bind mount)
+COPY composer.json composer.lock ./
 
 EXPOSE 9000
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-CMD ["php-fpm"]
-
+# --allow-to-run-as-root is required when pool user=root (PHP-FPM safety flag)
+CMD ["php-fpm", "--allow-to-run-as-root"]

@@ -84,8 +84,22 @@ DTC-Platform/
 │   ├── api.php                # Route API
 │   ├── web.php                # Route web (Inertia)
 │   └── auth.php               # Route autentikasi
+├── docker/
+│   ├── nginx/
+│   │   ├── default.conf           # Nginx config (development)
+│   │   └── default.prod.conf      # Nginx config (production)
+│   └── php/
+│       ├── entrypoint.sh          # Startup script container
+│       ├── php.ini                # PHP config production
+│       ├── php-dev.ini            # PHP config development (Xdebug)
+│       ├── www.conf               # PHP-FPM pool production
+│       └── www-dev.conf           # PHP-FPM pool development
+├── .dockerignore
 ├── .env.example
 ├── composer.json
+├── docker-compose.yml             # Development environment
+├── docker-compose.prod.yml        # Production override
+├── Dockerfile                     # Multi-stage build
 ├── package.json
 └── vite.config.js
 ```
@@ -94,14 +108,87 @@ DTC-Platform/
 
 ## Instalasi & Setup
 
-### Prasyarat
+Ada dua cara menjalankan aplikasi ini: **Docker** (direkomendasikan, sudah dikonfigurasi) atau **manual** (tanpa Docker).
+
+---
+
+### 🐳 Cara A — Docker (Direkomendasikan)
+
+#### Prasyarat
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (sudah include Docker Compose)
+
+#### Langkah Setup
+
+**1. Clone repository**
+```bash
+git clone <url-repo>
+cd DTC-Platform
+```
+
+**2. Salin file environment**
+```bash
+cp .env.example .env
+```
+
+**3. Buat volume Firebase (untuk push notification)**
+```bash
+docker volume create dtc-platform_firebase_credentials
+```
+
+**4. Build Docker image**
+```bash
+docker compose build
+```
+
+**5. Jalankan semua service**
+```bash
+docker compose up -d
+```
+
+> Container `app` akan otomatis menjalankan `composer install`, generate `APP_KEY`, migrasi database, dan `storage:link` saat pertama kali start.
+
+**6. Generate APP_KEY dan muat ulang container**
+```bash
+docker compose exec app php artisan key:generate --force
+docker compose up -d --force-recreate app
+```
+
+**7. (Opsional) Jalankan seeder untuk data demo**
+```bash
+docker compose exec app php artisan db:seed
+```
+
+Akun bawaan setelah seeder:
+
+| Role | Email | Password |
+|------|-------|----------|
+| Student (Demo) | `demo@example.com` | `ipalGemink123` |
+| Admin | `admin@example.com` | `admin1234` |
+
+Akses aplikasi di: **http://localhost**
+
+#### Perintah Docker Harian
+```bash
+docker compose up -d          # Start semua service
+docker compose down           # Stop semua service
+docker compose logs -f app    # Lihat log Laravel
+docker compose exec app php artisan migrate        # Jalankan migrasi baru
+docker compose exec app php artisan optimize:clear # Clear semua cache
+docker compose exec app php artisan db:seed        # Jalankan seeder
+```
+
+---
+
+### 🛠️ Cara B — Manual (Tanpa Docker)
+
+#### Prasyarat
 
 - PHP >= 8.2 (dengan ekstensi `pdo_pgsql`, `gd`)
 - Composer
 - Node.js >= 18 & npm
 - PostgreSQL
 
-### Langkah Instalasi
+#### Langkah Instalasi
 
 **1. Clone repository**
 ```bash
@@ -176,6 +263,17 @@ php artisan storage:link
 ---
 
 ## Menjalankan Aplikasi
+
+### 🐳 Dengan Docker
+
+```bash
+docker compose up -d
+```
+
+Akses aplikasi di: **http://localhost**  
+Vite HMR (hot reload): **http://localhost:5173**
+
+### 🛠️ Tanpa Docker
 
 Cara paling mudah adalah menggunakan satu perintah dari Composer yang akan menjalankan Laravel server, queue worker, dan Vite sekaligus:
 
