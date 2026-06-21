@@ -152,38 +152,56 @@ CMD ["php-fpm", "--allow-to-run-as-root"]
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 5: app — Production-ready image (last stage = Railway default target)
-# Small, non-root, no dev tools, all application files baked in.
+# Nginx + PHP-FPM + Supervisor dalam satu container untuk Railway.
 # ─────────────────────────────────────────────────────────────────────────────
 FROM base AS app
 
-# Copy PHP config tuned for production
-COPY docker/php/php.ini /usr/local/etc/php/conf.d/php-custom.ini
-COPY docker/php/www.conf /usr/local/etc/php-fpm.d/www.conf
+# Install Nginx (Supervisor sudah ada di base stage)
+RUN apk add --no-cache nginx
 
-# Copy application source (includes artisan, config, routes, resources, etc.)
+# ── PHP config ───────────────────────────────────────────────────────────────
+COPY docker/php/php.ini /usr/local/etc/php/conf.d/php-custom.ini
+# Production pool: listen = 127.0.0.1:9000 (loopback, Nginx & FPM satu container)
+COPY docker/php/www-prod.conf /usr/local/etc/php-fpm.d/www.conf
+
+# ── Nginx config ─────────────────────────────────────────────────────────────
+# Hapus default config, pakai config Railway
+RUN rm -f /etc/nginx/http.d/default.conf /etc/nginx/conf.d/default.conf 2>/dev/null || true
+COPY docker/nginx/railway.conf /etc/nginx/http.d/railway.conf
+
+# ── Supervisor config ─────────────────────────────────────────────────────────
+COPY docker/supervisor/supervisord.conf /etc/supervisord.conf
+
+# ── Application source ───────────────────────────────────────────────────────
 COPY --chown=laravel:laravel . .
 
-# Bring in vendor from composer stage (production deps only, autoloader optimized)
+# Vendor dari composer stage (production deps, optimized autoloader)
 COPY --from=composer-deps --chown=laravel:laravel /var/www/html/vendor ./vendor
 
-# Bring in built frontend assets from Vite
+# Built frontend assets dari Vite
 COPY --from=node-build --chown=laravel:laravel /app/public/build ./public/build
 
-# Copy entrypoint startup script
+# ── Entrypoint ───────────────────────────────────────────────────────────────
 COPY docker/php/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh \
     && sed -i 's/\r//' /usr/local/bin/entrypoint.sh
 
-# Fix directory permissions
+# ── Permissions ──────────────────────────────────────────────────────────────
 RUN mkdir -p storage/logs storage/framework/cache storage/framework/sessions \
               storage/framework/views bootstrap/cache \
-    && chown -R laravel:laravel storage bootstrap/cache \
-    && chmod -R 775 storage bootstrap/cache
+    && chown -R laravel:laravel storage bootstrap/cache public \
+    && chmod -R 775 storage bootstrap/cache \
+    # Nginx perlu baca /var/www/html/public
+    && chown -R laravel:laravel /var/www/html
 
-# Switch to non-root user for security
-USER laravel
+# NOTE: Tidak pakai USER laravel — Supervisor harus jalan sebagai root
+# agar bisa manage nginx (port 80) dan php-fpm. PHP-FPM workers
+# akan drop ke user 'laravel' sesuai konfigurasi www-prod.conf.
 
-EXPOSE 9000
+# Railway expose port 80 (HTTP via Nginx)
+EXPOSE 80
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-CMD ["php-fpm"]
+# Supervisor menjalankan Nginx + PHP-FPM secara bersamaan
+CMD ["supervisord", "-c", "/etc/supervisord.conf"]
+

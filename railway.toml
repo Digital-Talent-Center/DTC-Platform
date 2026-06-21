@@ -4,9 +4,8 @@
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
-# dockerTarget: paksa pakai production stage 'app', bukan 'app-dev'
-# Stage 'app-dev' tidak meng-copy semua file (bergantung bind mount lokal)
-dockerTarget = "app"
+# Stage 'app' adalah stage terakhir — Railway otomatis memilihnya
+# Berisi Nginx + PHP-FPM + Supervisor dalam satu container
 
 [deploy]
 restartPolicyType = "ON_FAILURE"
