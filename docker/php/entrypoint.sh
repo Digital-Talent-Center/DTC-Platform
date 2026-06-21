@@ -1,85 +1,104 @@
-#!/bin/bash
+#!/bin/sh
 # =============================================================================
 # Docker Entrypoint — DTC Platform Laravel App
-# Runs before php-fpm starts: composer install (dev), cache clear, migrate
+# Menggunakan /bin/sh (bukan bash) agar kompatibel dengan Alpine Linux
 # =============================================================================
 
 set -e
 
-echo "════════════════════════════════════════════════"
+echo "================================================"
 echo "  DTC Platform — Container Startup"
-echo "════════════════════════════════════════════════"
+echo "================================================"
 
-# ── 1. Install/update Composer dependencies (dev only) ────────────────────────
+# ── 0. Fix bind-mount permissions (critical for Docker Desktop on Windows/Mac)
+# When the host directory is bind-mounted, it overlays the container's dirs.
+# We ensure storage/ is writable regardless of host file ownership.
+echo "[entrypoint] Fixing storage permissions..."
+mkdir -p storage/logs \
+         storage/framework/cache \
+         storage/framework/sessions \
+         storage/framework/views \
+         bootstrap/cache
+chmod -R 777 storage bootstrap/cache 2>/dev/null || true
+
+# ── 1. Install/update Composer dependencies (dev mode) ─────────────────────
 if [ "${APP_ENV}" = "local" ] || [ "${APP_ENV}" = "development" ]; then
-    echo "[entrypoint] Installing Composer dependencies (dev)..."
+    echo "[entrypoint] APP_ENV=${APP_ENV} — installing Composer deps..."
     composer install \
         --no-interaction \
         --prefer-dist \
-        --optimize-autoloader 2>&1 || true
+        --optimize-autoloader 2>&1 || echo "[entrypoint] WARNING: composer install failed, continuing..."
 fi
 
-# ── 2. Wait for database to be ready ─────────────────────────────────────────
-DB_HOST="${DB_HOST:-postgres}"
-DB_PORT="${DB_PORT:-5432}"
+# ── 2. Tunggu database siap ─────────────────────────────────────────────────
+DB_HOST_VAL="${DB_HOST:-postgres}"
+DB_PORT_VAL="${DB_PORT:-5432}"
 MAX_RETRIES=30
 COUNT=0
 
-echo "[entrypoint] Waiting for database at ${DB_HOST}:${DB_PORT}..."
+echo "[entrypoint] Waiting for database at ${DB_HOST_VAL}:${DB_PORT_VAL}..."
 until php -r "
+try {
     \$pdo = new PDO(
-        'pgsql:host=${DB_HOST};port=${DB_PORT};dbname=${DB_DATABASE}',
-        '${DB_USERNAME}',
-        '${DB_PASSWORD}'
+        'pgsql:host=${DB_HOST_VAL};port=${DB_PORT_VAL};dbname=${DB_DATABASE:-dtc_platform}',
+        '${DB_USERNAME:-postgres}',
+        '${DB_PASSWORD:-}'
     );
-    echo 'ok';
-" 2>/dev/null | grep -q "ok"; do
+    exit(0);
+} catch (Exception \$e) {
+    exit(1);
+}
+" 2>/dev/null; do
     COUNT=$((COUNT + 1))
-    if [ $COUNT -ge $MAX_RETRIES ]; then
+    if [ "$COUNT" -ge "$MAX_RETRIES" ]; then
         echo "[entrypoint] ERROR: Database not ready after ${MAX_RETRIES} attempts. Exiting."
         exit 1
     fi
-    echo "[entrypoint] Database not ready yet... attempt ${COUNT}/${MAX_RETRIES}"
-    sleep 2
+    echo "[entrypoint]   attempt ${COUNT}/${MAX_RETRIES} — retrying in 3s..."
+    sleep 3
 done
 echo "[entrypoint] Database is ready ✓"
 
-# ── 3. Generate APP_KEY if missing ────────────────────────────────────────────
-if [ -z "${APP_KEY}" ]; then
-    echo "[entrypoint] Generating APP_KEY..."
+# ── 3. Generate APP_KEY jika kosong ─────────────────────────────────────────
+APP_KEY_VAL=$(grep "^APP_KEY=" /var/www/html/.env 2>/dev/null | cut -d'=' -f2-)
+if [ -z "$APP_KEY_VAL" ] || [ "$APP_KEY_VAL" = "" ]; then
+    echo "[entrypoint] APP_KEY is empty — generating..."
     php artisan key:generate --no-interaction --force
+    echo "[entrypoint] APP_KEY generated ✓"
+else
+    echo "[entrypoint] APP_KEY already set ✓"
 fi
 
-# ── 4. Run migrations ─────────────────────────────────────────────────────────
+# ── 4. Jalankan migrasi database ────────────────────────────────────────────
 echo "[entrypoint] Running database migrations..."
 php artisan migrate --force --no-interaction
+echo "[entrypoint] Migrations done ✓"
 
-# ── 5. Cache configuration (production only) ─────────────────────────────────
+# ── 5. Cache config (production) / Clear cache (dev) ────────────────────────
 if [ "${APP_ENV}" = "production" ]; then
-    echo "[entrypoint] Caching config, routes, views for production..."
+    echo "[entrypoint] Caching for production..."
     php artisan config:cache
     php artisan route:cache
     php artisan view:cache
     php artisan event:cache
 else
     echo "[entrypoint] Clearing caches for development..."
-    php artisan config:clear
-    php artisan route:clear
-    php artisan view:clear
-    php artisan cache:clear
+    php artisan config:clear  2>/dev/null || true
+    php artisan route:clear   2>/dev/null || true
+    php artisan view:clear    2>/dev/null || true
+    php artisan cache:clear   2>/dev/null || true
 fi
 
-# ── 6. Fix storage symlink ────────────────────────────────────────────────────
+# ── 6. Storage symlink ───────────────────────────────────────────────────────
 echo "[entrypoint] Creating storage symlink..."
 php artisan storage:link --force 2>/dev/null || true
 
-# ── 7. Fix permissions on runtime directories ─────────────────────────────────
-echo "[entrypoint] Fixing storage permissions..."
+# ── 7. Fix permissions ───────────────────────────────────────────────────────
+echo "[entrypoint] Fixing permissions..."
 chmod -R 775 storage bootstrap/cache 2>/dev/null || true
 
-echo "════════════════════════════════════════════════"
+echo "================================================"
 echo "  Startup complete — launching: $@"
-echo "════════════════════════════════════════════════"
+echo "================================================"
 
-# Hand off to CMD (php-fpm)
 exec "$@"

@@ -61,10 +61,9 @@ phpunit.xml
 .phpunit.result.cache
 pestphp.xml
 
-# ── Docker files themselves (not needed inside image) ────────────────────────
-Dockerfile
+# ── Docker compose files (not needed inside image, but docker/ IS needed for build) ──
 docker-compose*.yml
-docker/
+# NOTE: Do NOT exclude docker/ — the Dockerfile COPYs config files from docker/php/ and docker/nginx/
 
 # ── Documentation ────────────────────────────────────────────────────────────
 README.md

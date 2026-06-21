@@ -58,7 +58,14 @@ services:
       target: app-dev
     container_name: dtc_queue
     restart: unless-stopped
-    command: ["php", "artisan", "queue:work", "redis", "--sleep=3", "--tries=3", "--max-time=3600"]
+    # Override entrypoint — queue worker tidak perlu migrate lagi (app sudah handle)
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "[queue] Waiting for app to be ready..."
+        sleep 20
+        echo "[queue] Starting queue worker..."
+        php artisan queue:work redis --sleep=3 --tries=3 --max-time=3600
     env_file:
       - .env
     environment:
@@ -70,7 +77,7 @@ services:
     networks:
       - dtc_network
     depends_on:
-      app:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -167,7 +174,7 @@ services:
     networks:
       - dtc_network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD:-} ping | grep PONG || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -188,10 +195,11 @@ volumes:
   node_modules_cache:
     driver: local
   # Mount point for Firebase credentials JSON
-  # Before first run: docker volume create dtc-platform_firebase_credentials
-  # Then copy your JSON: docker run --rm -v dtc-platform_firebase_credentials:/creds -v $(pwd)/storage/app/firebase:/src alpine cp /src/firebase-service-account.json /creds/
+  # Volume sudah dibuat dengan: docker volume create dtc-platform_firebase_credentials
+  # Cara upload JSON: lihat walkthrough.md
   firebase_credentials:
-    driver: local
+    external: true
+    name: dtc-platform_firebase_credentials
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Networks
