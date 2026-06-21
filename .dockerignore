@@ -42,6 +42,9 @@ vendor/
 # ── Built frontend assets (built by node-build stage) ────────────────────────
 public/build/
 public/hot
+# Symlink dibuat oleh 'php artisan storage:link' — tidak bisa dibaca Railway CLI di Windows (os error 1920)
+# Akan dibuat ulang otomatis oleh entrypoint.sh saat container start
+public/storage
 
 # ── Laravel runtime / cache (generated at container startup) ─────────────────
 bootstrap/cache/*.php
