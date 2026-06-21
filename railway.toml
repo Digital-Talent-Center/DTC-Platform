@@ -1,0 +1,13 @@
+# railway.toml — Konfigurasi build & deploy untuk Railway
+# Docs: https://docs.railway.app/reference/config-as-code
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+# dockerTarget: paksa pakai production stage 'app', bukan 'app-dev'
+# Stage 'app-dev' tidak meng-copy semua file (bergantung bind mount lokal)
+dockerTarget = "app"
+
+[deploy]
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3

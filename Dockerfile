@@ -103,45 +103,7 @@ RUN npm run build
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Stage 4: app — Production-ready image (small, non-root, no dev tools)
-# ─────────────────────────────────────────────────────────────────────────────
-FROM base AS app
-
-# Copy PHP config tuned for production
-COPY docker/php/php.ini /usr/local/etc/php/conf.d/php-custom.ini
-COPY docker/php/www.conf /usr/local/etc/php-fpm.d/www.conf
-
-# Copy application source
-COPY --chown=laravel:laravel . .
-
-# Bring in vendor from composer stage
-COPY --from=composer-deps --chown=laravel:laravel /var/www/html/vendor ./vendor
-
-# Bring in built frontend assets
-COPY --from=node-build --chown=laravel:laravel /app/public/build ./public/build
-
-# Copy entrypoint
-COPY docker/php/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh \
-    && sed -i 's/\r//' /usr/local/bin/entrypoint.sh
-
-# Fix directory permissions
-RUN mkdir -p storage/logs storage/framework/cache storage/framework/sessions \
-              storage/framework/views bootstrap/cache \
-    && chown -R laravel:laravel storage bootstrap/cache \
-    && chmod -R 775 storage bootstrap/cache
-
-# Switch to non-root user
-USER laravel
-
-EXPOSE 9000
-
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-CMD ["php-fpm"]
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Stage 5: app-dev — Development image with Xdebug
+# Stage 4: app-dev — Development image with Xdebug
 # Runs PHP-FPM as root so it can write to Windows Docker bind-mounted files.
 # On Windows, ALL bind-mounted files appear as root:root inside the container.
 # This is DEVELOPMENT ONLY — production uses the non-root laravel user.
@@ -186,3 +148,42 @@ EXPOSE 9000
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 # --allow-to-run-as-root is required when pool user=root (PHP-FPM safety flag)
 CMD ["php-fpm", "--allow-to-run-as-root"]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 5: app — Production-ready image (last stage = Railway default target)
+# Small, non-root, no dev tools, all application files baked in.
+# ─────────────────────────────────────────────────────────────────────────────
+FROM base AS app
+
+# Copy PHP config tuned for production
+COPY docker/php/php.ini /usr/local/etc/php/conf.d/php-custom.ini
+COPY docker/php/www.conf /usr/local/etc/php-fpm.d/www.conf
+
+# Copy application source (includes artisan, config, routes, resources, etc.)
+COPY --chown=laravel:laravel . .
+
+# Bring in vendor from composer stage (production deps only, autoloader optimized)
+COPY --from=composer-deps --chown=laravel:laravel /var/www/html/vendor ./vendor
+
+# Bring in built frontend assets from Vite
+COPY --from=node-build --chown=laravel:laravel /app/public/build ./public/build
+
+# Copy entrypoint startup script
+COPY docker/php/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh \
+    && sed -i 's/\r//' /usr/local/bin/entrypoint.sh
+
+# Fix directory permissions
+RUN mkdir -p storage/logs storage/framework/cache storage/framework/sessions \
+              storage/framework/views bootstrap/cache \
+    && chown -R laravel:laravel storage bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
+
+# Switch to non-root user for security
+USER laravel
+
+EXPOSE 9000
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["php-fpm"]
