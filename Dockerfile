@@ -164,9 +164,8 @@ COPY docker/php/php.ini /usr/local/etc/php/conf.d/php-custom.ini
 # Production pool: listen = 127.0.0.1:9000 (loopback, Nginx & FPM satu container)
 COPY docker/php/www-prod.conf /usr/local/etc/php-fpm.d/www.conf
 
-# ── Nginx config ─────────────────────────────────────────────────────────────
-# Hapus default config, pakai config Railway
-RUN rm -f /etc/nginx/http.d/default.conf /etc/nginx/conf.d/default.conf 2>/dev/null || true
+# Hapus SEMUA config lama (termasuk default Alpine yang mungkin punya default_server)
+RUN rm -rf /etc/nginx/http.d/* /etc/nginx/conf.d/* 2>/dev/null || true
 COPY docker/nginx/railway.conf /etc/nginx/http.d/railway.conf
 
 # ── Supervisor config ─────────────────────────────────────────────────────────
