@@ -157,7 +157,9 @@ CMD ["php-fpm", "--allow-to-run-as-root"]
 FROM base AS app
 
 # Install Nginx (Supervisor sudah ada di base stage)
-RUN apk add --no-cache nginx
+# Tambahkan nginx user ke grup laravel agar nginx worker bisa baca file app
+RUN apk add --no-cache nginx \
+    && addgroup nginx laravel
 
 # ── PHP config ───────────────────────────────────────────────────────────────
 COPY docker/php/php.ini /usr/local/etc/php/conf.d/php-custom.ini
@@ -188,14 +190,16 @@ RUN chmod +x /usr/local/bin/entrypoint.sh \
 # ── Permissions ──────────────────────────────────────────────────────────────
 RUN mkdir -p storage/logs storage/framework/cache storage/framework/sessions \
               storage/framework/views bootstrap/cache \
-    && chown -R laravel:laravel storage bootstrap/cache public \
+    # Owner: laravel, Group: laravel (nginx sudah masuk grup ini)
+    && chown -R laravel:laravel /var/www/html \
+    # storage & bootstrap/cache: group-writable (php-fpm & entrypoint perlu tulis)
     && chmod -R 775 storage bootstrap/cache \
-    # Nginx perlu baca /var/www/html/public
-    && chown -R laravel:laravel /var/www/html
+    # public: group-readable untuk nginx (r-xr-xr-x untuk dir, r--r--r-- untuk file)
+    && find public -type d -exec chmod 755 {} \; \
+    && find public -type f -exec chmod 644 {} \;
 
-# NOTE: Tidak pakai USER laravel — Supervisor harus jalan sebagai root
-# agar bisa manage nginx (port 80) dan php-fpm. PHP-FPM workers
-# akan drop ke user 'laravel' sesuai konfigurasi www-prod.conf.
+# Supervisord jalan sebagai root, lalu fork nginx (user=nginx, sudah masuk grup laravel)
+# dan php-fpm (user=laravel per www-prod.conf)
 
 # Railway expose port 80 (HTTP via Nginx)
 EXPOSE 80
