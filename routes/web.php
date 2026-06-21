@@ -123,6 +123,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/admin/library', [DocumentController::class, 'adminIndex'])->name('admin.library');
         Route::post('/admin/library', [DocumentController::class, 'adminStore'])->name('admin.library.store');
         Route::delete('/admin/library/{document}', [DocumentController::class, 'adminDestroy'])->name('admin.library.destroy');
+
+        // Premium Post management
+        Route::get('/admin/premium-posts', [\App\Http\Controllers\PremiumTransactionController::class, 'adminIndex'])->name('admin.premium-posts');
+        Route::delete('/admin/premium-posts/{id}', [\App\Http\Controllers\PremiumTransactionController::class, 'adminDestroy'])->name('admin.premium-posts.destroy');
     });
 });
 

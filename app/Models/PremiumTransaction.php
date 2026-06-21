@@ -79,7 +79,6 @@ class PremiumTransaction extends Model
         }
 
         // Gunakan path relatif agar URL benar di semua host/port (localhost, 127.0.0.1:8000, dll)
-        // Storage::disk('public')->url() menggunakan APP_URL yang sering tidak cocok saat dev
         return '/storage/' . $path;
     }
 
@@ -97,5 +96,25 @@ class PremiumTransaction extends Model
     public function scopePending($query)
     {
         return $query->where('status', 'pending');
+    }
+
+    /**
+     * Accessor: hitung tanggal expired berdasarkan durasi
+     */
+    public function getExpiredAtAttribute()
+    {
+        $start = $this->paid_at ?? $this->created_at;
+        $expired = $start ? clone $start : now();
+        
+        switch ($this->duration) {
+            case '7-hari': $expired->addDays(7); break;
+            case '1-minggu': $expired->addWeeks(1); break;
+            case '1-bulan': $expired->addMonths(1); break;
+            case '3-bulan': $expired->addMonths(3); break;
+            case '6-bulan': $expired->addMonths(6); break;
+            case '1-tahun': $expired->addYears(1); break;
+            default: $expired->addMonths(1); break;
+        }
+        return $expired;
     }
 }

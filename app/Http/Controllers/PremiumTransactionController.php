@@ -74,4 +74,45 @@ class PremiumTransactionController extends Controller
 
         return response()->json(['message' => 'Post berhasil dihapus']);
     }
+
+    /**
+     * GET /admin/premium-posts
+     */
+    public function adminIndex()
+    {
+        $posts = PremiumTransaction::with('user')->latest()->get()->map(function($tx) {
+            return [
+                'id' => $tx->id,
+                'title' => $tx->post_title,
+                'user' => $tx->user ? $tx->user->name : 'Unknown',
+                'posting_date' => ($tx->paid_at ?? $tx->created_at)->format('d-m-Y'),
+                'expired_date' => $tx->expired_at->format('d-m-Y'),
+                'status' => $tx->status,
+                'amount' => $tx->amount,
+                'attachment_path' => $tx->imageUrl,
+                'created_at' => $tx->created_at->toISOString(),
+            ];
+        });
+
+        return \Inertia\Inertia::render('admin/PremiumPost-Management', [
+            'initialPosts' => $posts,
+            'total' => $posts->count()
+        ]);
+    }
+
+    /**
+     * DELETE /admin/premium-posts/{id}
+     */
+    public function adminDestroy(int $id)
+    {
+        $tx = PremiumTransaction::findOrFail($id);
+
+        if ($tx->attachment_path) {
+            Storage::disk('public')->delete($tx->attachment_path);
+        }
+
+        $tx->delete();
+
+        return redirect()->back();
+    }
 }

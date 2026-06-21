@@ -99,6 +99,17 @@ class AdminDashboardController extends Controller
             ];
         });
 
+        // 5 Premium Post terbaru (preview)
+        $recentPremiumPosts = \App\Models\PremiumTransaction::with('user')->latest()->take(5)->get()->map(function ($tx) {
+            return [
+                'id'           => $tx->id,
+                'title'        => $tx->post_title,
+                'user'         => $tx->user ? $tx->user->name : 'Unknown',
+                'posting_date' => ($tx->paid_at ?? $tx->created_at)->format('d-m-Y'),
+                'expired_date' => $tx->expired_at->format('d-m-Y'),
+            ];
+        });
+
         return Inertia::render('admin/dashboard', [
             'totalStudents'            => $totalStudents,
             'totalApprovedAchievements'=> $totalApprovedAchievements,
@@ -108,6 +119,7 @@ class AdminDashboardController extends Controller
             'recentReports'            => $recentReports,
             'recentGuides'             => $recentGuides,
             'recentDocuments'          => $recentDocuments,
+            'recentPremiumPosts'       => $recentPremiumPosts,
         ]);
     }
 }
