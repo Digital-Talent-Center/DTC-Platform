@@ -60,8 +60,9 @@ done
 echo "[entrypoint] Database is ready ✓"
 
 # ── 3. Generate APP_KEY jika kosong ─────────────────────────────────────────
-APP_KEY_VAL=$(grep "^APP_KEY=" /var/www/html/.env 2>/dev/null | cut -d'=' -f2-)
-if [ -z "$APP_KEY_VAL" ] || [ "$APP_KEY_VAL" = "" ]; then
+# Prioritas: env var (Railway/Docker) → file .env (lokal)
+APP_KEY_VAL="${APP_KEY:-$(grep "^APP_KEY=" /var/www/html/.env 2>/dev/null | cut -d'=' -f2-)}"
+if [ -z "$APP_KEY_VAL" ] || [ "$APP_KEY_VAL" = '""' ] || [ "$APP_KEY_VAL" = "''" ]; then
     echo "[entrypoint] APP_KEY is empty — generating..."
     php artisan key:generate --no-interaction --force
     echo "[entrypoint] APP_KEY generated ✓"
