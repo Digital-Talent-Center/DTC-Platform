@@ -178,8 +178,12 @@ COPY --chown=laravel:laravel . .
 # Vendor dari composer stage (production deps, optimized autoloader)
 COPY --from=composer-deps --chown=laravel:laravel /var/www/html/vendor ./vendor
 
-# Built frontend assets dari Vite
+# Built frontend assets dari Vite (client-side)
 COPY --from=node-build --chown=laravel:laravel /app/public/build ./public/build
+
+# SSR bundle dari Vite (server-side rendering support)
+# laravel-vite-plugin v1.0 dengan 'ssr:' config otomatis build bootstrap/ssr/
+COPY --from=node-build --chown=laravel:laravel /app/bootstrap/ssr ./bootstrap/ssr
 
 # ── Entrypoint ───────────────────────────────────────────────────────────────
 COPY docker/php/entrypoint.sh /usr/local/bin/entrypoint.sh
