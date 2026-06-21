@@ -14,6 +14,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Trust all proxies — Railway terminates HTTPS at edge, forwards HTTP to container.
+        // Without this, X-Forwarded-Proto header is ignored and Laravel generates http:// URLs
+        // causing mixed content errors that block JS/CSS assets in the browser.
+        $middleware->trustProxies(at: '*');
+
         $middleware->web(append: [
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,

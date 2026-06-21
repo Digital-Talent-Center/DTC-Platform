@@ -166,9 +166,8 @@ COPY docker/php/php.ini /usr/local/etc/php/conf.d/php-custom.ini
 # Production pool: listen = 127.0.0.1:9000 (loopback, Nginx & FPM satu container)
 COPY docker/php/www-prod.conf /usr/local/etc/php-fpm.d/www.conf
 
-# Hapus SEMUA config lama (termasuk default Alpine yang mungkin punya default_server)
-RUN rm -rf /etc/nginx/http.d/* /etc/nginx/conf.d/* 2>/dev/null || true
-COPY docker/nginx/railway.conf /etc/nginx/http.d/railway.conf
+# Ganti nginx.conf utama langsung — lebih reliable dari http.d/ yang mungkin tidak di-include
+COPY docker/nginx/nginx.conf /etc/nginx/nginx.conf
 
 # ── Supervisor config ─────────────────────────────────────────────────────────
 COPY docker/supervisor/supervisord.conf /etc/supervisord.conf
@@ -179,7 +178,7 @@ COPY --chown=laravel:laravel . .
 # Vendor dari composer stage (production deps, optimized autoloader)
 COPY --from=composer-deps --chown=laravel:laravel /var/www/html/vendor ./vendor
 
-# Built frontend assets dari Vite
+# Built frontend assets dari Vite (client-side)
 COPY --from=node-build --chown=laravel:laravel /app/public/build ./public/build
 
 # ── Entrypoint ───────────────────────────────────────────────────────────────

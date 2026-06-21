@@ -86,21 +86,26 @@ DTC-Platform/
 │   └── auth.php               # Route autentikasi
 ├── docker/
 │   ├── nginx/
-│   │   ├── default.conf           # Nginx config (development)
-│   │   └── default.prod.conf      # Nginx config (production)
-│   └── php/
-│       ├── entrypoint.sh          # Startup script container
-│       ├── php.ini                # PHP config production
-│       ├── php-dev.ini            # PHP config development (Xdebug)
-│       ├── www.conf               # PHP-FPM pool production
-│       └── www-dev.conf           # PHP-FPM pool development
+│   │   ├── default.conf           # Nginx config (development, reverse proxy ke PHP-FPM)
+│   │   ├── default.prod.conf      # Nginx config (production override)
+│   │   ├── nginx.conf             # Nginx main config (dipakai di production image)
+│   │   └── railway.conf           # Nginx config khusus Railway
+│   ├── php/
+│   │   ├── entrypoint.sh          # Startup script (migrate, key:generate, storage:link)
+│   │   ├── php.ini                # PHP config production
+│   │   ├── php-dev.ini            # PHP config development (Xdebug enabled)
+│   │   ├── www-dev.conf           # PHP-FPM pool development (user=root, Windows compat)
+│   │   └── www-prod.conf          # PHP-FPM pool production (user=laravel)
+│   └── supervisor/
+│       └── supervisord.conf       # Supervisor config (Nginx + PHP-FPM, production only)
 ├── .dockerignore
 ├── .env.example
 ├── composer.json
-├── docker-compose.yml             # Development environment
+├── docker-compose.yml             # Development environment (app + vite + nginx + postgres + redis)
 ├── docker-compose.prod.yml        # Production override
-├── Dockerfile                     # Multi-stage build
+├── Dockerfile                     # Multi-stage build (base → composer-deps → node-build → app-dev → app)
 ├── package.json
+├── railway.toml                   # Railway build & deploy config
 └── vite.config.js
 ```
 
@@ -115,7 +120,7 @@ Ada dua cara menjalankan aplikasi ini: **Docker** (direkomendasikan, sudah dikon
 ### 🐳 Cara A — Docker (Direkomendasikan)
 
 #### Prasyarat
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (sudah include Docker Compose)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (sudah include Docker Compose v2)
 
 #### Langkah Setup
 
@@ -130,30 +135,56 @@ cd DTC-Platform
 cp .env.example .env
 ```
 
-**3. Buat volume Firebase (untuk push notification)**
+Buka `.env` dan isi minimal dua nilai berikut (wajib, tidak boleh kosong):
+```env
+DB_PASSWORD=password_pilihanmu
+REDIS_PASSWORD=password_pilihanmu
+```
+
+> Nilai `DB_PASSWORD` dan `REDIS_PASSWORD` di `.env` harus sama persis yang dipakai service `postgres` dan `redis`. Jika kosong, container tidak bisa terhubung.
+
+**3. Buat external volume untuk Firebase credentials**
+
+Volume ini diperlukan karena `firebase_credentials` di `docker-compose.yml` bertipe `external: true`. Perintah ini hanya perlu dijalankan **sekali**:
 ```bash
 docker volume create dtc-platform_firebase_credentials
 ```
+
+> Jika kamu tidak menggunakan Firebase (push notification), volume tetap harus dibuat — boleh kosong. Fitur utama aplikasi tidak bergantung pada Firebase.
 
 **4. Build Docker image**
 ```bash
 docker compose build
 ```
 
+> Build pertama akan memakan waktu beberapa menit karena mengunduh base image PHP 8.2-fpm-alpine, menginstall ekstensi (Redis, Xdebug, GD, pdo_pgsql, dll), dan Composer 2.
+
 **5. Jalankan semua service**
 ```bash
 docker compose up -d
 ```
 
-> Container `app` akan otomatis menjalankan `composer install`, generate `APP_KEY`, migrasi database, dan `storage:link` saat pertama kali start.
+Ini akan menjalankan enam service sekaligus:
 
-**6. Generate APP_KEY dan muat ulang container**
-```bash
-docker compose exec app php artisan key:generate --force
-docker compose up -d --force-recreate app
-```
+| Service | Container | Keterangan |
+|---------|-----------|------------|
+| `app` | `dtc_app` | PHP-FPM Laravel (dev stage, Xdebug aktif) |
+| `queue` | `dtc_queue` | Queue worker Redis (`queue:work redis`) |
+| `vite` | `dtc_vite` | Vite dev server + HMR (Node 20) |
+| `nginx` | `dtc_nginx` | Reverse proxy (port 80) |
+| `postgres` | `dtc_postgres` | PostgreSQL 16 |
+| `redis` | `dtc_redis` | Redis 7 (cache, session, queue) |
 
-**7. (Opsional) Jalankan seeder untuk data demo**
+Container `app` menjalankan `entrypoint.sh` secara otomatis yang akan:
+1. Fix permission `storage/` dan `bootstrap/cache`
+2. Install Composer dependencies (`composer install`)
+3. Menunggu PostgreSQL siap (loop health check)
+4. Generate `APP_KEY` jika belum ada di `.env`
+5. Jalankan migrasi database (`php artisan migrate`)
+6. Clear cache development (`config:clear`, `route:clear`, dll)
+7. Buat symlink storage (`php artisan storage:link`)
+
+**6. (Opsional) Jalankan seeder untuk data demo**
 ```bash
 docker compose exec app php artisan db:seed
 ```
@@ -165,17 +196,31 @@ Akun bawaan setelah seeder:
 | Student (Demo) | `demo@example.com` | `ipalGemink123` |
 | Admin | `admin@example.com` | `admin1234` |
 
-Akses aplikasi di: **http://localhost**
+Akses aplikasi di: **http://localhost**  
+Vite HMR (hot reload): **http://localhost:5173**
 
 #### Perintah Docker Harian
 ```bash
-docker compose up -d          # Start semua service
-docker compose down           # Stop semua service
-docker compose logs -f app    # Lihat log Laravel
-docker compose exec app php artisan migrate        # Jalankan migrasi baru
-docker compose exec app php artisan optimize:clear # Clear semua cache
-docker compose exec app php artisan db:seed        # Jalankan seeder
+docker compose up -d                                      # Start semua service
+docker compose down                                       # Stop semua service
+docker compose logs -f app                                # Lihat log Laravel
+docker compose logs -f vite                               # Lihat log Vite
+docker compose exec app php artisan migrate               # Jalankan migrasi baru
+docker compose exec app php artisan migrate:fresh --seed  # Reset DB + seed ulang
+docker compose exec app php artisan optimize:clear        # Clear semua cache
+docker compose exec app php artisan db:seed               # Jalankan seeder
+docker compose exec app php artisan tinker                # REPL Laravel
 ```
+
+#### Troubleshooting Umum
+
+| Masalah | Solusi |
+|---------|--------|
+| Container `app` langsung exit | Cek `DB_PASSWORD` di `.env`, pastikan sama dengan yang dipakai `postgres` service |
+| `SQLSTATE[08006]` connection refused | PostgreSQL belum selesai start. Tunggu 30 detik, lalu cek `docker compose logs postgres` |
+| Vite HMR tidak jalan | Pastikan port `5173` tidak diblok firewall; cek `docker compose logs vite` |
+| `volume "dtc-platform_firebase_credentials" not found` | Jalankan `docker volume create dtc-platform_firebase_credentials` (Langkah 3) |
+| Permission denied di `storage/` | Jalankan `docker compose exec app chmod -R 777 storage bootstrap/cache` |
 
 ---
 
@@ -183,10 +228,11 @@ docker compose exec app php artisan db:seed        # Jalankan seeder
 
 #### Prasyarat
 
-- PHP >= 8.2 (dengan ekstensi `pdo_pgsql`, `gd`)
-- Composer
-- Node.js >= 18 & npm
-- PostgreSQL
+- PHP >= 8.2 dengan ekstensi: `pdo_pgsql`, `pgsql`, `gd`, `zip`, `bcmath`, `pcntl`, `opcache`, `intl`, `mbstring`, `redis`
+- [Composer](https://getcomposer.org/) >= 2
+- [Node.js](https://nodejs.org/) >= 20 & npm
+- PostgreSQL >= 14 (versi 16 direkomendasikan)
+- Redis >= 7 (untuk cache, session, dan queue)
 
 #### Langkah Instalasi
 
@@ -222,13 +268,22 @@ DB_HOST=127.0.0.1
 DB_PORT=5432
 DB_DATABASE=dtc_platform
 DB_USERNAME=postgres
-DB_PASSWORD=(isi_password)
+DB_PASSWORD=isi_password_kamu
+
+REDIS_CLIENT=phpredis
+REDIS_HOST=127.0.0.1
+REDIS_PASSWORD=            # Boleh kosong jika Redis lokal tanpa password
+REDIS_PORT=6379
+
+CACHE_STORE=redis
+QUEUE_CONNECTION=redis
+SESSION_DRIVER=redis
 ```
 
-Untuk fitur pembayaran (Midtrans Sandbox):
+Untuk fitur pembayaran (Midtrans Sandbox), dapatkan key dari [dashboard.sandbox.midtrans.com](https://dashboard.sandbox.midtrans.com) → Settings → Access Keys:
 ```env
-MIDTRANS_SERVER_KEY=Mid-server-tOmErGbEpNXbNW0UpfFcCOgV
-MIDTRANS_CLIENT_KEY=Mid-client-FZgCuX4t9C8DJA9z
+MIDTRANS_SERVER_KEY=Mid-server-xxxxxxxxxxxxxxxxxxxx
+MIDTRANS_CLIENT_KEY=Mid-client-xxxxxxxxxxxxxxxxxxxx
 MIDTRANS_IS_PRODUCTION=false
 VITE_MIDTRANS_CLIENT_KEY="${MIDTRANS_CLIENT_KEY}"
 VITE_MIDTRANS_SNAP_URL=https://app.sandbox.midtrans.com/snap/snap.js
@@ -255,10 +310,12 @@ Seeder akan membuat dua akun bawaan yang bisa langsung dipakai:
 
 > **Catatan:** Akun demo juga dilengkapi dengan contoh data — posts, achievements, activities, notifications, dan dokumen — supaya tampilan aplikasi tidak kosong saat pertama kali dijalankan.
 
-**7. (Opsional) Buat symlink storage**
+**7. Buat symlink storage**
 ```bash
 php artisan storage:link
 ```
+
+> Langkah ini **wajib** agar file yang diupload (foto profil, bukti prestasi, lampiran premium post) bisa diakses publik melalui browser.
 
 ---
 
@@ -287,11 +344,11 @@ Atau jalankan manual di beberapa terminal terpisah:
 # Terminal 1 — Laravel server
 php artisan serve
 
-# Terminal 2 — Vite dev server (hot reload)
+# Terminal 2 — Vite dev server (hot reload React + Tailwind)
 npm run dev
 
-# Terminal 3 — Queue worker (opsional, untuk background jobs)
-php artisan queue:listen --tries=1
+# Terminal 3 — Queue worker (diperlukan untuk background jobs)
+php artisan queue:work redis --sleep=3 --tries=3
 ```
 
 Akses aplikasi di: **http://localhost:8000**
@@ -302,15 +359,23 @@ Akses aplikasi di: **http://localhost:8000**
 
 | Variable | Keterangan |
 |----------|-----------|
-| `APP_KEY` | Generate dengan `php artisan key:generate` |
+| `APP_KEY` | Generate dengan `php artisan key:generate` (otomatis oleh entrypoint Docker) |
+| `APP_ENV` | `local` untuk development, `production` untuk Railway |
 | `DB_CONNECTION` | Gunakan `pgsql` |
-| `DB_DATABASE` | Nama database PostgreSQL |
+| `DB_HOST` | `postgres` (Docker) atau `127.0.0.1` (manual) |
+| `DB_PASSWORD` | Wajib diisi; harus konsisten antara `.env` dan Docker service |
+| `REDIS_HOST` | `redis` (Docker) atau `127.0.0.1` (manual) |
+| `REDIS_PASSWORD` | Set password yang sama di `.env` dan Redis service |
+| `CACHE_STORE` | Gunakan `redis` |
+| `QUEUE_CONNECTION` | Gunakan `redis` (queue worker otomatis jalan di container `queue`) |
+| `SESSION_DRIVER` | Gunakan `redis` |
 | `MIDTRANS_SERVER_KEY` | Server key dari dashboard Midtrans (jangan expose ke frontend) |
-| `MIDTRANS_CLIENT_KEY` | Client key Midtrans (boleh expose ke browser) |
-| `MIDTRANS_IS_PRODUCTION` | Set `false` untuk sandbox/development |
-| `VITE_MIDTRANS_CLIENT_KEY` | Referensi ke `MIDTRANS_CLIENT_KEY` untuk Vite |
-| `VITE_MIDTRANS_SNAP_URL` | URL Snap.js Midtrans (sandbox atau production) |
-| `FILESYSTEM_DISK` | Set `local` atau `public` untuk storage upload |
+| `MIDTRANS_CLIENT_KEY` | Client key Midtrans (aman di browser) |
+| `MIDTRANS_IS_PRODUCTION` | `false` untuk sandbox, `true` untuk live payment |
+| `VITE_MIDTRANS_CLIENT_KEY` | Referensi ke `MIDTRANS_CLIENT_KEY` untuk Vite/React |
+| `VITE_MIDTRANS_SNAP_URL` | URL Snap.js Midtrans — sandbox atau production |
+| `FILESYSTEM_DISK` | `local` untuk development, `s3` jika pakai object storage |
+| `FIREBASE_CREDENTIALS` | Path ke service account JSON Firebase (dalam container) |
 
 ---
 

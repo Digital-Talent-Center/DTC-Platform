@@ -2,6 +2,8 @@
 .env
 .env.backup
 .env.production
+.env.local
+.env.*.local
 .phpactor.json
 .phpunit.result.cache
 /.fleet
@@ -11,12 +13,17 @@
 /.vscode
 /.zed
 /bootstrap/ssr
+/bootstrap/cache
 /node_modules
 /public/build
 /public/hot
 /public/storage
 /storage/*.key
 /storage/pail
+/storage/logs
+/storage/framework/cache
+/storage/framework/sessions
+/storage/framework/views
 /vendor
 auth.json
 Homestead.json
@@ -27,3 +34,9 @@ yarn-error.log
 # Firebase service account credentials — JANGAN commit ke git
 /storage/app/firebase-service-account.json
 /storage/app/firebase/*.json
+
+# Docker override (local dev only)
+docker-compose.override.yml
+
+# Railway (generated files)
+.railway/

@@ -105,8 +105,7 @@ export default function ProfilePage({ userId }: { userId?: string | number }) {
                     <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{profile?.user?.name || (isOwnProfile ? auth.user?.name : 'User')}</h1>
                     <span className="inline-block mt-1.5 text-base font-semibold text-amber-600 capitalize">{profile?.role || 'Student'}</span>
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mt-3 text-sm text-gray-500">
-                      {(profile?.user?.email || (isOwnProfile ? auth.user?.email : null)) && <span>{profile?.user?.email || auth.user?.email}</span>}
-                      {profile?.nim && <><span className="hidden sm:inline text-gray-300">•</span><span>NIM: {profile.nim}</span></>}
+                      {profile?.nim && <><span>NIM: {profile.nim}</span></>}
                       {profile?.faculty && <><span className="hidden sm:inline text-gray-300">•</span><span>{profile.faculty}</span></>}
                     </div>
                   </>
