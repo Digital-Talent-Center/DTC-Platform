@@ -76,7 +76,6 @@ README.md
 .prettierrc
 .prettierignore
 eslint.config.js
-tsconfig.json
-components.json
+# NOTE: Do NOT exclude tsconfig.json or components.json — they are needed by the node-build stage in the Dockerfile
 Homestead.*
 auth.json
