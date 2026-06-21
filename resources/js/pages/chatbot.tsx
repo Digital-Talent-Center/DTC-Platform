@@ -194,7 +194,7 @@ export default function ChatbotPage() {
       });
     };
 
-    const unsubscribe = window.botpress?.on('message', handleMessage);
+    const unsubscribe = window.botpress?.on('message', handleMessage) as any;
     return () => {
       if (typeof unsubscribe === 'function') {
         unsubscribe();
