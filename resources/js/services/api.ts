@@ -132,6 +132,28 @@ export const api = {
     },
 
     /**
+     * Upload media file (photo/video) for a post.
+     * Returns the public URL to be saved as image_url in the post.
+     */
+    uploadMedia: async (file: File): Promise<{ url: string; path: string }> => {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const headers: Record<string, string> = {
+        'Accept': 'application/json',
+      };
+      const token = getCsrfToken();
+      if (token) headers['X-XSRF-TOKEN'] = token;
+
+      return fetch(`${API_BASE}/posts/upload-media`, {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: formData,
+      }).then(r => handleResponse<{ url: string; path: string }>(r));
+    },
+
+    /**
      * Update post
      */
     update: async (id: number, data: Partial<Post>): Promise<ApiResponse<Post>> => {

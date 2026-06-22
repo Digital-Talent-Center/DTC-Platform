@@ -68,6 +68,7 @@ export default function TimelineIndex() {
   const [profile, setProfile] = useState<ProfileExtension | null>(null);
   const [recentActivities, setRecentActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [commentInputs, setCommentInputs] = useState<Record<number, string>>({});
 
@@ -214,45 +215,31 @@ export default function TimelineIndex() {
     if (!postText.trim()) return;
 
     try {
-      let newPost;
-      // Send a placeholder or dummy URL to backend to pass VARCHAR(500) validation
-      let dummyUrl = undefined;
+      setUploading(true);
+
+      // Step 1: Upload media file to server first (not localStorage)
+      let uploadedUrl: string | undefined = undefined;
       if (imageFile) {
-        if (activeAttachType === 'photo') {
-          dummyUrl = 'https://images.unsplash.com/photo-placeholder-local';
-        } else if (activeAttachType === 'video') {
-          dummyUrl = 'https://www.w3schools.com/html/mov_bbb.mp4';
+        try {
+          const uploadResult = await api.posts.uploadMedia(imageFile);
+          uploadedUrl = uploadResult.url;
+        } catch (uploadErr) {
+          console.error('Media upload failed:', uploadErr);
+          // If upload fails, still allow posting without image
         }
       } else if (imageUrl.trim()) {
-        dummyUrl = imageUrl.trim();
+        // User provided a URL directly
+        uploadedUrl = imageUrl.trim();
       }
 
-      newPost = await api.posts.create({
+      // Step 2: Create the post with the real server URL
+      const newPost = await api.posts.create({
         content: postText,
-        image_url: dummyUrl,
+        image_url: uploadedUrl,
         tag: tag.trim() || undefined
       } as any);
 
       const createdData = newPost.data;
-
-      // Save local file to localStorage if selected
-      if (imageFile && createdData?.id) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64String = reader.result as string;
-          try {
-            localStorage.setItem(`post_media_${createdData.id}`, base64String);
-            localStorage.setItem(`post_media_type_${createdData.id}`, activeAttachType || 'photo');
-            // Update posts state to immediately show local media
-            setPosts(prev => prev.map(p =>
-              p.id === createdData.id ? { ...p, localMedia: base64String, localMediaType: activeAttachType } : p
-            ));
-          } catch (e) {
-            console.error('LocalStorage media save error:', e);
-          }
-        };
-        reader.readAsDataURL(imageFile);
-      }
 
       setPosts(prev => [{ ...createdData, showComments: false }, ...prev]);
       setPostText('');
@@ -263,6 +250,8 @@ export default function TimelineIndex() {
     } catch (err) {
       console.error('Failed to create post:', err);
       setError('Failed to create post');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -525,10 +514,18 @@ export default function TimelineIndex() {
                   </div>
                   <button
                     onClick={createPost}
-                    disabled={!postText.trim()}
-                    className="px-4 py-1.5 text-xs font-medium text-white bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 rounded-lg transition-colors"
+                    disabled={!postText.trim() || uploading}
+                    className="px-4 py-1.5 text-xs font-medium text-white bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center gap-1.5"
                   >
-                    Post
+                    {uploading ? (
+                      <>
+                        <svg className="w-3 h-3 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                        </svg>
+                        Uploading...
+                      </>
+                    ) : 'Post'}
                   </button>
                 </div>
               </div>
@@ -606,31 +603,45 @@ export default function TimelineIndex() {
                   </div>
                   <p className="text-sm text-gray-700 leading-relaxed mb-4">{post.content}</p>
                   {(() => {
+                    // Known placeholder/broken URLs from the old localStorage approach — skip rendering
+                    const BROKEN_PLACEHOLDER_URLS = [
+                      'https://images.unsplash.com/photo-placeholder-local',
+                      'https://www.w3schools.com/html/mov_bbb.mp4',
+                    ];
+
+                    // Backward compat: check localStorage for posts uploaded before the fix
                     const localMedia = (post as any).localMedia || localStorage.getItem(`post_media_${post.id}`);
                     const localMediaType = (post as any).localMediaType || localStorage.getItem(`post_media_type_${post.id}`);
 
-                    const mediaUrl = localMedia || post.imageUrl || (post as any).image_url;
+                    const rawUrl = post.imageUrl || (post as any).image_url;
+                    // Prefer server URL over localStorage; skip known broken placeholders
+                    const mediaUrl = BROKEN_PLACEHOLDER_URLS.includes(rawUrl ?? '')
+                      ? (localMedia || null)  // fall back to local only if available
+                      : (rawUrl || localMedia || null);
+
                     if (!mediaUrl) return null;
 
                     const isVideo = localMediaType === 'video' ||
-                      (!localMedia && mediaUrl.match(/\.(mp4|webm|ogg)$/i)) ||
-                      mediaUrl.startsWith('data:video/') ||
-                      mediaUrl.includes('mov_bbb.mp4');
+                      (!localMedia && (mediaUrl as string).match(/\.(mp4|webm|ogg)$/i)) ||
+                      (mediaUrl as string).startsWith('data:video/') ||
+                      (mediaUrl as string).includes('mov_bbb.mp4');
 
                     if (isVideo) {
                       return (
                         <video
-                          src={mediaUrl}
+                          src={mediaUrl as string}
                           controls
                           className="w-full max-h-[350px] object-cover rounded-xl border border-gray-100"
+                          onError={(e) => { (e.currentTarget as HTMLVideoElement).style.display = 'none'; }}
                         />
                       );
                     } else {
                       return (
                         <img
-                          src={mediaUrl}
-                          alt="Post"
+                          src={mediaUrl as string}
+                          alt="Post media"
                           className="w-full max-h-[350px] object-cover rounded-xl border border-gray-100"
+                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                         />
                       );
                     }
