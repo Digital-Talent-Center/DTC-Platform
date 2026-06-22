@@ -179,6 +179,19 @@ export const api = {
   },
 
   /**
+   * Reports API
+   */
+  reports: {
+    /**
+     * Create a new report for a post
+     */
+    create: async (data: { post_id: number; reason: string; description?: string }): Promise<ApiResponse<any>> => {
+      return fetch(`${API_BASE}/reports`, buildFetchOptions('POST', data))
+        .then(r => handleResponse<ApiResponse<any>>(r));
+    },
+  },
+
+  /**
    * Comments API
    */
   comments: {

@@ -271,31 +271,11 @@ export default function TimelineIndex() {
     if (!reportingPostId) return;
     setSubmittingReport(true);
     try {
-      const getCsrfToken = () => {
-        const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
-        return match ? decodeURIComponent(match[1]) : '';
-      };
-      const token = getCsrfToken() || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-
-      const response = await fetch('/api/reports', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'X-XSRF-TOKEN': token,
-          'X-CSRF-TOKEN': token,
-        },
-        body: JSON.stringify({
-          post_id: reportingPostId,
-          reason: reportReason,
-          description: reportDescription,
-        }),
+      await api.reports.create({
+        post_id: reportingPostId,
+        reason: reportReason,
+        description: reportDescription || undefined,
       });
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.message || 'Failed to submit report');
-      }
 
       alert('Laporan berhasil dikirim dan akan segera ditinjau oleh admin.');
       setReportingPostId(null);
