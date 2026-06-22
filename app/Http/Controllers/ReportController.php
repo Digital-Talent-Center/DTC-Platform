@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Report;
 use App\Models\Post;
+use App\Services\FcmService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class ReportController extends Controller
@@ -241,7 +243,7 @@ class ReportController extends Controller
     public function adminActivityManagement(Request $request)
     {
         $query = Report::query()
-            ->with(['post', 'reporter']);
+            ->with(['post.user', 'reporter']);
 
         // Filter status jika ada
         if ($request->filled('status')) {
@@ -259,16 +261,21 @@ class ReportController extends Controller
                 ->take(2)
                 ->join('');
 
+            $post = $report->post;
+
             return [
-                'id'          => $report->id,
-                'user'        => $report->reporter->name ?? 'Unknown',
-                'userId'      => $report->reporter->id ?? null,
-                'avatar'      => $initials,
-                'reason'      => strtoupper(str_replace('_', ' ', $report->reason)),
-                'content'     => $report->description ?? ($report->post->content ?? 'Tidak ada deskripsi.'),
-                'status'      => $report->status,
-                'post_id'     => $report->post_id,
-                'created_at'  => $report->created_at->toISOString(),
+                'id'              => $report->id,
+                'user'            => $report->reporter->name ?? 'Unknown',
+                'userId'          => $report->reporter->id ?? null,
+                'avatar'          => $initials,
+                'reason'          => strtoupper(str_replace('_', ' ', $report->reason)),
+                'description'     => $report->description ?? null,
+                'status'          => $report->status,
+                'post_id'         => $report->post_id,
+                'post_content'    => $post?->content ?? null,
+                'post_owner'      => $post?->user?->name ?? null,
+                'post_owner_id'   => $post?->user?->id ?? null,
+                'created_at'      => $report->created_at->toISOString(),
             ];
         });
 
@@ -281,13 +288,89 @@ class ReportController extends Controller
     }
 
     /**
-     * Delete a report (admin only)
+     * Delete a report record only (admin only)
      */
     public function destroy(Report $report)
     {
         try {
             $report->delete();
             return back()->with('success', 'Laporan berhasil dihapus.');
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Dismiss a report as fake/invalid — keep the post, mark report dismissed.
+     */
+    public function dismissReport(Report $report)
+    {
+        try {
+            $report->update([
+                'status'      => 'dismissed',
+                'action_taken' => 'Laporan ditolak oleh admin (tidak valid / fake report)',
+                'resolved_by' => Auth::id(),
+                'resolved_at' => now(),
+            ]);
+
+            return back()->with('success', 'Laporan diabaikan. Postingan tetap ada.');
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Delete the reported post + resolve all related reports + notify post owner.
+     */
+    public function deletePostAndReport(Report $report)
+    {
+        try {
+            $post = $report->post;
+
+            if (!$post) {
+                // Post sudah dihapus, langsung resolve laporan saja
+                $report->update([
+                    'status'       => 'resolved',
+                    'action_taken' => 'Postingan sudah tidak ada',
+                    'resolved_by'  => Auth::id(),
+                    'resolved_at'  => now(),
+                ]);
+                return back()->with('success', 'Postingan sudah tidak ada. Laporan diselesaikan.');
+            }
+
+            $postOwner = $post->user;
+
+            // Resolve semua laporan terkait post ini
+            Report::where('post_id', $post->id)->update([
+                'status'       => 'resolved',
+                'action_taken' => 'Postingan dihapus oleh admin karena melanggar aturan komunitas',
+                'resolved_by'  => Auth::id(),
+                'resolved_at'  => now(),
+            ]);
+
+            // Hapus postingan
+            $post->delete();
+
+            // Kirim notifikasi in-app + FCM ke pemilik post
+            if ($postOwner) {
+                try {
+                    $fcm = new FcmService();
+                    $fcm->sendToUser(
+                        $postOwner,
+                        'Postingan Anda Dihapus',
+                        'Postingan Anda telah dihapus oleh admin karena melanggar aturan komunitas DTC Platform.',
+                        [
+                            'type'   => 'post_deleted_by_admin',
+                            'reason' => $report->reason,
+                        ],
+                        'SYSTEM',
+                    );
+                } catch (\Throwable $e) {
+                    Log::warning('[ReportController] Gagal kirim notif hapus post: ' . $e->getMessage());
+                }
+            }
+
+            return back()->with('success', 'Postingan berhasil dihapus dan pemilik telah dinotifikasi.');
         } catch (\Exception $e) {
             return back()->withErrors(['error' => $e->getMessage()]);
         }

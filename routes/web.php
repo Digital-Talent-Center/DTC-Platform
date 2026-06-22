@@ -105,6 +105,8 @@ Route::middleware(['auth'])->group(function () {
 
         Route::get('/admin/activities', [ReportController::class, 'adminActivityManagement'])->name('admin.activities');
         Route::delete('/admin/reports/{report}', [ReportController::class, 'destroy'])->name('admin.reports.destroy');
+        Route::patch('/admin/reports/{report}/dismiss', [ReportController::class, 'dismissReport'])->name('admin.reports.dismiss');
+        Route::delete('/admin/reports/{report}/delete-post', [ReportController::class, 'deletePostAndReport'])->name('admin.reports.delete-post');
 
         Route::get('/admin/achievements', [AchievementController::class, 'adminIndex'])->name('admin.achievements');
         Route::patch('/admin/achievements/{achievement}/status', [AchievementController::class, 'updateStatus'])->name('admin.achievements.updateStatus');
