@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, ChangeEvent, FormEvent, DragEvent } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
+import { getCsrfToken } from '@/services/api';
 
 const tahunAjaranOptions = ['2023/2024', '2024/2025', '2025/2026', '2026/2027'];
 const kategoriOptions = ['Kompetisi Ilmiah', 'Kompetisi Olahraga', 'Kompetisi Seni', 'Pengabdian Masyarakat', 'Konferensi', 'Lainnya'];
@@ -190,17 +191,10 @@ export default function SubmitAchievementPage() {
         formData.append('bukti', file);
       }
       
-      // Read CSRF token from the meta tag
-      const getCsrfToken = () => {
-        return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-      };
-      
-      const token = getCsrfToken();
-      
       const response = await fetch('/api/achievements', {
         method: 'POST',
         headers: {
-          'X-CSRF-TOKEN': token,
+          'X-XSRF-TOKEN': getCsrfToken(),
           'Accept': 'application/json',
         },
         credentials: 'include',

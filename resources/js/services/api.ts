@@ -16,9 +16,11 @@ import type {
 const API_BASE = '/api';
 
 /**
- * Get CSRF token from cookie (set by Laravel)
+ * Get CSRF token from XSRF-TOKEN cookie (set by Laravel).
+ * Use this in all fetch() calls that mutate state (POST/PUT/PATCH/DELETE).
+ * Send as header: 'X-XSRF-TOKEN': getCsrfToken()
  */
-function getCsrfToken(): string {
+export function getCsrfToken(): string {
   const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
   return match ? decodeURIComponent(match[1]) : '';
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import AppLayout from "@/layouts/app-layout";
 import { Head, Link } from "@inertiajs/react";
+import { getCsrfToken } from '@/services/api';
 
 interface Guide {
   id: number | string;
@@ -110,9 +111,8 @@ export default function CoGuidePage() {
     fetch(`/api/guides/${guide.id}/download`, {
       method: 'POST',
       headers: {
-        'X-CSRF-TOKEN': document
-          .querySelector('meta[name="csrf-token"]')
-          ?.getAttribute('content') || '',
+        'Accept': 'application/json',
+        'X-XSRF-TOKEN': getCsrfToken(),
       },
       credentials: 'include',
     }).catch(err => console.error('Download count error:', err));
