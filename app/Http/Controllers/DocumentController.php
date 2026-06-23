@@ -102,8 +102,11 @@ class DocumentController extends Controller
      */
     public function adminDestroy(Document $document): \Illuminate\Http\RedirectResponse
     {
-        if ($document->file_path && str_starts_with($document->file_path, '/storage/')) {
-            Storage::disk('public')->delete(str_replace('/storage/', '', $document->file_path));
+        if ($document->file_path) {
+            $internalPath = parse_url($document->file_path, PHP_URL_PATH) ?? $document->file_path;
+            if (str_starts_with($internalPath, '/storage/')) {
+                Storage::disk('public')->delete(substr($internalPath, 9));
+            }
         }
 
         $document->delete();
@@ -268,8 +271,11 @@ class DocumentController extends Controller
         }
 
         // Delete file if it exists
-        if ($document->file_path && Storage::exists($document->file_path)) {
-            Storage::delete($document->file_path);
+        if ($document->file_path) {
+            $internalPath = parse_url($document->file_path, PHP_URL_PATH) ?? $document->file_path;
+            if (str_starts_with($internalPath, '/storage/')) {
+                Storage::disk('public')->delete(substr($internalPath, 9));
+            }
         }
 
         $document->delete();
@@ -287,13 +293,19 @@ class DocumentController extends Controller
             return $this->messageResponse('Unauthorized', 403);
         }
 
-        if (!$document->file_path || !Storage::exists($document->file_path)) {
+        $internalPath = null;
+        if ($document->file_path) {
+            $path = parse_url($document->file_path, PHP_URL_PATH) ?? $document->file_path;
+            $internalPath = str_starts_with($path, '/storage/') ? substr($path, 9) : $path;
+        }
+
+        if (!$internalPath || !Storage::disk('public')->exists($internalPath)) {
             return $this->messageResponse('File not found', 404);
         }
 
         $document->increment('downloads_count');
 
-        return Storage::download($document->file_path);
+        return Storage::disk('public')->download($internalPath);
     }
 
     /**

@@ -85,8 +85,11 @@ class GuideController extends Controller
      */
     public function adminDestroy(Guide $guide): \Illuminate\Http\RedirectResponse
     {
-        if ($guide->file_path && str_starts_with($guide->file_path, '/storage/')) {
-            Storage::disk('public')->delete(str_replace('/storage/', '', $guide->file_path));
+        if ($guide->file_path) {
+            $internalPath = parse_url($guide->file_path, PHP_URL_PATH) ?? $guide->file_path;
+            if (str_starts_with($internalPath, '/storage/')) {
+                Storage::disk('public')->delete(substr($internalPath, 9));
+            }
         }
 
         $guide->delete();
@@ -218,6 +221,13 @@ class GuideController extends Controller
             return $this->messageResponse('Unauthorized', 403);
         }
 
+        if ($guide->file_path) {
+            $internalPath = parse_url($guide->file_path, PHP_URL_PATH) ?? $guide->file_path;
+            if (str_starts_with($internalPath, '/storage/')) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete(substr($internalPath, 9));
+            }
+        }
+
         $guide->delete();
 
         return $this->messageResponse('Guide deleted successfully');
@@ -234,10 +244,16 @@ class GuideController extends Controller
 
         $guide->incrementDownloads();
 
-        if (!$guide->file_path || !\Illuminate\Support\Facades\Storage::exists($guide->file_path)) {
+        $internalPath = null;
+        if ($guide->file_path) {
+            $path = parse_url($guide->file_path, PHP_URL_PATH) ?? $guide->file_path;
+            $internalPath = str_starts_with($path, '/storage/') ? substr($path, 9) : $path;
+        }
+
+        if (!$internalPath || !\Illuminate\Support\Facades\Storage::disk('public')->exists($internalPath)) {
             return $this->messageResponse('File not found', 404);
         }
 
-        return \Illuminate\Support\Facades\Storage::download($guide->file_path);
+        return \Illuminate\Support\Facades\Storage::disk('public')->download($internalPath);
     }
 }
