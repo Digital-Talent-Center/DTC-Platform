@@ -375,18 +375,25 @@ export default function TimelineIndex() {
             {/* Create Post */}
             {!userIdParam && (
               <div className="bg-white rounded-2xl border border-gray-100 p-5">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-xs font-bold overflow-hidden">
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-xs font-bold overflow-hidden flex-shrink-0">
                     {(profile?.avatarUrl || (profile as any)?.avatar_url) ? <img src={profile?.avatarUrl || (profile as any)?.avatar_url} alt="Avatar" className="w-full h-full object-cover" /> : getInitials(profile?.user?.name || 'AA')}
                   </div>
-                  <input
-                    type="text"
-                    placeholder="Start a post"
-                    value={postText}
-                    onChange={(e) => setPostText(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); createPost(); } }}
-                    className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-full text-sm text-gray-600 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
-                  />
+                  <div className="flex-1">
+                    <textarea
+                      placeholder="Start a post (max 1000 characters). Press Enter to post, Shift+Enter for new line."
+                      value={postText}
+                      onChange={(e) => setPostText(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); createPost(); } }}
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-600 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent resize-y min-h-[60px]"
+                      maxLength={1000}
+                    />
+                    <div className="text-right mt-1">
+                      <span className={`text-[10px] font-medium ${postText.length >= 1000 ? 'text-red-500' : 'text-gray-400'}`}>
+                        {postText.length}/1000
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Conditional attachment inputs */}
@@ -581,7 +588,7 @@ export default function TimelineIndex() {
                       )}
                     </div>
                   </div>
-                  <p className="text-sm text-gray-700 leading-relaxed mb-4">{post.content}</p>
+                  <p className="text-sm text-gray-700 leading-relaxed mb-4 whitespace-pre-wrap break-words">{post.content}</p>
                   {(() => {
                     // Known placeholder/broken URLs from the old localStorage approach — skip rendering
                     const BROKEN_PLACEHOLDER_URLS = [

@@ -247,7 +247,7 @@ export default function ProfilePage({ userId }: { userId?: string | number }) {
                           {post.tag && <span className="inline-block px-1.5 py-0.5 mt-0.5 text-[10px] font-medium bg-amber-50 text-amber-600 rounded">{post.tag}</span>}
                         </div>
                       </div>
-                      <p className="text-sm text-gray-600 line-clamp-3 mb-3">{post.content}</p>
+                      <p className="text-sm text-gray-600 line-clamp-3 mb-3 whitespace-pre-wrap break-words">{post.content}</p>
                       {(() => {
                         const localMedia = (post as any).localMedia || (typeof window !== 'undefined' ? localStorage.getItem(`post_media_${post.id}`) : null);
                         const localMediaType = (post as any).localMediaType || (typeof window !== 'undefined' ? localStorage.getItem(`post_media_type_${post.id}`) : null);
