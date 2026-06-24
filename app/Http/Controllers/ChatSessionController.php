@@ -21,6 +21,12 @@ class ChatSessionController extends Controller
             'title' => 'nullable|string'
         ]);
 
+        \Log::info('ChatSession store called', [
+            'user_id' => $request->user()->id,
+            'botpress_conversation_id' => $request->botpress_conversation_id,
+            'title' => $request->title,
+        ]);
+
         $session = $request->user()->chatSessions()->updateOrCreate(
             ['botpress_conversation_id' => $request->botpress_conversation_id],
             ['title' => $request->title ?? 'Percakapan Baru']
@@ -28,6 +34,8 @@ class ChatSessionController extends Controller
 
         // Update the timestamp if it already existed so it bumps to the top
         $session->touch();
+
+        \Log::info('ChatSession stored', ['session_id' => $session->id]);
 
         return response()->json($session);
     }

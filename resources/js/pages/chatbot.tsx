@@ -24,13 +24,12 @@ const BP_SHADOW_CSS = `
   header, [class*="Header"], [data-testid*="header"] {
     display: none !important;
   }
-  /* Hide built-in conversation history sidebar — we have our own */
+  /* Hide native sidebar/history — we have our own */
   [class*="Sidebar"], [class*="sidebar"],
   [class*="History"], [class*="history"],
   [class*="ConversationList"], [class*="conversationList"] {
     display: none !important;
   }
-  /* Hide back / toggle buttons for history */
   button[aria-label*="istory"], button[aria-label*="onversation"],
   [class*="BackButton"], [class*="backButton"] {
     display: none !important;
@@ -82,9 +81,97 @@ const BP_KEY = `bp-webchat-${BP_CLIENT_ID}-client`;
 
 const getBpConvoId = (): string | null => {
   try {
-    return JSON.parse(localStorage.getItem(BP_KEY) || '{}')?.state?.conversationId || null;
+    // Try the primary key first
+    const primary = JSON.parse(localStorage.getItem(BP_KEY) || '{}');
+    if (primary?.state?.conversationId) return primary.state.conversationId;
+
+    // Scan all localStorage keys for Botpress data
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key || !key.startsWith('bp-webchat-')) continue;
+      try {
+        const data = JSON.parse(localStorage.getItem(key) || '{}');
+        if (data?.state?.conversationId) return data.state.conversationId;
+        if (data?.conversationId) return data.conversationId;
+      } catch { /* skip malformed keys */ }
+    }
+    return null;
   } catch { return null; }
 };
+
+/* ── Detect when user sends a message to Botpress ── */
+/* Botpress uses WebSocket for messaging, not window.fetch. We intercept all
+   three channels (fetch, WebSocket, keydown Enter) for full coverage.        */
+let _interceptorsReady = false;
+let _lastMsgTs = 0;
+
+function dispatchUserMessage(text: string) {
+  const now = Date.now();
+  if (now - _lastMsgTs < 3000) return; // dedup: ignore within 3s window
+  _lastMsgTs = now;
+  console.log('DTC AI - User message detected:', text);
+  // Delay to let Botpress assign the conversation ID in localStorage
+  setTimeout(() => {
+    window.dispatchEvent(new CustomEvent('dtc-user-message', { detail: { text } }));
+  }, 1200);
+}
+
+function setupInterceptors() {
+  if (_interceptorsReady) return;
+  _interceptorsReady = true;
+
+  // 1. Fetch interceptor (in case Botpress uses REST for some operations)
+  const origFetch = window.fetch;
+  window.fetch = async function (...args: Parameters<typeof fetch>) {
+    const response = await origFetch.apply(this, args);
+    try {
+      const url = typeof args[0] === 'string' ? args[0] : (args[0] as Request)?.url || '';
+      const opts = args[1];
+      if (url.includes('botpress') && opts?.method?.toUpperCase() === 'POST' && opts?.body) {
+        const body = typeof opts.body === 'string' ? JSON.parse(opts.body) : null;
+        const msgText = body?.payload?.text?.trim();
+        if (msgText && msgText.length >= 2) {
+          dispatchUserMessage(msgText);
+        }
+      }
+    } catch { /* ignore */ }
+    return response;
+  };
+
+  // 2. WebSocket interceptor (Botpress primarily uses WebSocket for messaging)
+  const origWsSend = WebSocket.prototype.send;
+  WebSocket.prototype.send = function (data: string | ArrayBufferLike | Blob | ArrayBufferView) {
+    try {
+      if (typeof data === 'string') {
+        const parsed = JSON.parse(data);
+        const msgText = (parsed?.payload?.text || parsed?.text || '').trim();
+        if (msgText && msgText.length >= 2) {
+          console.log('DTC AI - WebSocket message intercepted:', msgText);
+          dispatchUserMessage(msgText);
+        }
+      }
+    } catch { /* not JSON, ignore */ }
+    return origWsSend.call(this, data);
+  };
+
+  // 3. Keydown Enter handler (most reliable fallback — reads input value directly)
+  document.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (e.key !== 'Enter' || e.shiftKey) return;
+    const active = getDeepActiveElement();
+    if (!active) return;
+    let text = '';
+    if (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') {
+      text = (active as HTMLInputElement).value?.trim() || '';
+    } else if ((active as HTMLElement).contentEditable === 'true') {
+      text = (active as HTMLElement).textContent?.trim() || '';
+    }
+    if (text.length >= 2) {
+      console.log('DTC AI - Keydown Enter intercepted:', text);
+      dispatchUserMessage(text);
+    }
+  }, true); // capture phase to get it before Botpress clears the input
+}
+setupInterceptors();
 
 /* ── API helpers ── */
 const csrfToken = () =>
@@ -116,13 +203,23 @@ const fetchHistory = async (): Promise<HistoryItem[]> => {
   } catch { return []; }
 };
 
-const upsertSession = async (bpConvoId: string, title: string) => {
+const upsertSession = async (bpConvoId: string, title: string): Promise<{id: number} | null> => {
   try {
-    await apiFetch('/chat-sessions', {
+    const res = await apiFetch('/chat-sessions', {
       method: 'POST',
       body: JSON.stringify({ botpress_conversation_id: bpConvoId, title }),
     });
-  } catch { /* best-effort */ }
+    if (!res.ok) {
+      console.error('DTC AI - upsertSession HTTP error:', res.status);
+      return null;
+    }
+    const data = await res.json();
+    console.log('DTC AI - upsertSession OK:', data);
+    return data;
+  } catch (err) {
+    console.error('DTC AI - upsertSession failed:', err);
+    return null;
+  }
 };
 
 const deleteSession = async (serverId: number) => {
@@ -155,65 +252,56 @@ export default function ChatbotPage() {
     fetchHistory().then(h => setHistory(h));
   }, []);
 
-  /* ── Sync current Botpress conversation into sidebar history ── */
+  /* ── Sync current Botpress conversation active ID (polling — no session creation) ── */
   const syncHistory = useCallback(() => {
     const cid = getBpConvoId();
     if (!cid) return;
     setActiveId(cid);
   }, []);
 
-  /* ── Rename title when user sends first message (Botpress Event Listener) ── */
+  /* ── Create session ONLY when user sends a message (fetch interceptor) ── */
   useEffect(() => {
-    if (status !== 'ready') return;
-
-    const handleMessage = (event: any) => {
-      if (event.direction !== 'outgoing') return;
-
-      const text = (event.payload?.text || event.preview || event.content || '').trim();
-      if (text.length < 2) return;
+    const handler = (e: Event) => {
+      const text = (e as CustomEvent).detail?.text;
+      if (!text) return;
 
       const cid = getBpConvoId();
+      console.log('DTC AI - Fetch intercepted user message:', text, 'cid:', cid);
       if (!cid) return;
+
+      const title = text.length > 35 ? text.slice(0, 35) + '…' : text;
+      const preview = text.length > 60 ? text.slice(0, 60) + '…' : text;
 
       setHistory(prev => {
         const item = prev.find(h => h.id === cid);
-        const title = text.length > 35 ? text.slice(0, 35) + '…' : text;
-        const preview = text.length > 60 ? text.slice(0, 60) + '…' : text;
-
         if (!item) {
-          // New conversation, save it to server and add to sidebar list
-          upsertSession(cid, title);
-          return [
-            { id: cid, title, preview, ts: Date.now() },
-            ...prev
-          ];
+          // Brand new conversation — create with message text as title
+          console.log('DTC AI - Creating session:', cid, title);
+          upsertSession(cid, title).then(data => {
+            if (data?.id) {
+              setHistory(h => h.map(hi =>
+                hi.id === cid ? { ...hi, serverId: data.id } : hi
+              ));
+            }
+          });
+          return [{ id: cid, title, preview, ts: Date.now() }, ...prev];
         }
-
-        // Existing conversation but was named "Percakapan Baru", rename it on server
-        if (item.title === 'Percakapan Baru') {
-          upsertSession(cid, title);
-          return prev.map(h =>
-            h.id === cid ? { ...h, title, preview } : h
-          );
-        }
-
+        // Already exists — no rename needed, title was set on first message
         return prev;
       });
     };
 
-    const unsubscribe = window.botpress?.on('message', handleMessage) as any;
-    return () => {
-      if (typeof unsubscribe === 'function') {
-        unsubscribe();
-      }
-    };
-  }, [status]);
+    window.addEventListener('dtc-user-message', handler);
+    return () => window.removeEventListener('dtc-user-message', handler);
+  }, [
+    // no deps — handler reads getBpConvoId() fresh each time
+  ]);
 
   /* ── Actions ── */
   const initBotpress = () => {
     try {
       // 1. Clean up existing Botpress elements and scripts
-      try { window.botpress?.close(); } catch {}
+      try { window.botpress?.close(); } catch { }
       document.getElementById('bp-webchat-container')?.remove();
       document.querySelectorAll('[class*="bp-widget"]').forEach(el => el.remove());
       document.getElementById('bp-inject')?.remove();
@@ -249,7 +337,7 @@ export default function ChatbotPage() {
   useEffect(() => {
     initBotpress();
     return () => {
-      try { window.botpress?.close(); } catch {}
+      try { window.botpress?.close(); } catch { }
     };
   }, []);
 
@@ -315,8 +403,8 @@ export default function ChatbotPage() {
 
         {/* ─── MOBILE OVERLAY ─── */}
         {isSidebarOpen && (
-          <div 
-            className="fixed inset-0 bg-black/20 z-10 md:hidden" 
+          <div
+            className="fixed inset-0 bg-black/20 z-10 md:hidden"
             onClick={() => setIsSidebarOpen(false)}
           />
         )}
@@ -352,11 +440,10 @@ export default function ChatbotPage() {
             {history.length > 0 ? history.map(h => (
               <div key={h.id}
                 onClick={() => switchChat(h.id)}
-                className={`group w-full flex items-start justify-between gap-1 px-3 py-3 rounded-xl cursor-pointer transition-all ${
-                  activeId === h.id
+                className={`group w-full flex items-start justify-between gap-1 px-3 py-3 rounded-xl cursor-pointer transition-all ${activeId === h.id
                     ? 'bg-amber-50 border-l-[3px] border-l-amber-400 border border-amber-200'
                     : 'border border-transparent hover:bg-gray-50'
-                }`}>
+                  }`}>
                 <div className="min-w-0 flex-1">
                   <p className={`text-xs font-bold truncate ${activeId === h.id ? 'text-gray-900' : 'text-gray-700'}`}>{h.title}</p>
                   <p className="text-[11px] text-gray-400 truncate mt-0.5">{h.preview}</p>
@@ -399,8 +486,8 @@ export default function ChatbotPage() {
           {/* Header */}
           <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 bg-white border-b border-gray-100 shrink-0 z-10">
             <div className="flex items-center gap-2 sm:gap-3">
-              <button 
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+              <button
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                 className="p-1.5 -ml-1 hover:bg-gray-100 rounded-lg transition-colors text-gray-500"
                 title="Toggle Sidebar"
               >
